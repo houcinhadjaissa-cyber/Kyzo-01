@@ -3,20 +3,32 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AIOS — Personal AI Operating System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: projects
+    description: AI-generated software projects
+  - name: workflows
+    description: AI automation workflows
+  - name: deployments
+    description: Project deployment management
+  - name: models
+    description: AI model catalog and routing
+  - name: activity
+    description: Activity and audit log
+  - name: dashboard
+    description: Dashboard aggregates
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +36,333 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List all projects
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a new project from a prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get project detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectRequest"
+      responses:
+        "200":
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Delete a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /projects/{id}/generate:
+    post:
+      operationId: generateProject
+      tags: [projects]
+      summary: Trigger AI generation for a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateRequest"
+      responses:
+        "200":
+          description: Generation started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerationJob"
+
+  /projects/{id}/scan:
+    post:
+      operationId: scanProject
+      tags: [projects]
+      summary: Run security scan on a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scan result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecurityScan"
+
+  /projects/{id}/deploy:
+    post:
+      operationId: deployProject
+      tags: [projects]
+      summary: Deploy a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeployRequest"
+      responses:
+        "200":
+          description: Deployment started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deployment"
+
+  /projects/{id}/deployments:
+    get:
+      operationId: listProjectDeployments
+      tags: [projects]
+      summary: List deployments for a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deployments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Deployment"
+
+  /workflows:
+    get:
+      operationId: listWorkflows
+      tags: [workflows]
+      summary: List all AI workflows
+      responses:
+        "200":
+          description: List of workflows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workflow"
+    post:
+      operationId: createWorkflow
+      tags: [workflows]
+      summary: Create a new workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkflowRequest"
+      responses:
+        "201":
+          description: Workflow created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+
+  /workflows/{id}:
+    get:
+      operationId: getWorkflow
+      tags: [workflows]
+      summary: Get workflow detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Workflow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+    delete:
+      operationId: deleteWorkflow
+      tags: [workflows]
+      summary: Delete a workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /workflows/{id}/run:
+    post:
+      operationId: runWorkflow
+      tags: [workflows]
+      summary: Execute a workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Workflow run result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowRun"
+
+  /deployments:
+    get:
+      operationId: listDeployments
+      tags: [deployments]
+      summary: List all deployments across all projects
+      responses:
+        "200":
+          description: Deployments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Deployment"
+
+  /models:
+    get:
+      operationId: listModels
+      tags: [models]
+      summary: List available AI models
+      responses:
+        "200":
+          description: AI model catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiModel"
+
+  /activity:
+    get:
+      operationId: listActivity
+      tags: [activity]
+      summary: Get recent activity across all projects
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Activity events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEvent"
+
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard aggregates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +373,357 @@ components:
       required:
         - status
 
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        prompt:
+          type: string
+        status:
+          type: string
+          enum: [idle, generating, ready, deploying, deployed, error]
+        tech:
+          type: array
+          items:
+            type: string
+        deployedUrl:
+          type: string
+        lastDeployedAt:
+          type: string
+          format: date-time
+        securityScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        prompt:
+          type: string
+        tech:
+          type: array
+          items:
+            type: string
+      required:
+        - name
+        - prompt
+
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [idle, generating, ready, deploying, deployed, error]
+
+    GenerateRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+        modelId:
+          type: string
+      required:
+        - prompt
+
+    GenerationJob:
+      type: object
+      properties:
+        jobId:
+          type: string
+        projectId:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, completed, failed]
+        modelUsed:
+          type: string
+        estimatedSeconds:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+      required:
+        - jobId
+        - projectId
+        - status
+        - startedAt
+
+    SecurityScan:
+      type: object
+      properties:
+        projectId:
+          type: string
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        criticalIssues:
+          type: integer
+        highIssues:
+          type: integer
+        mediumIssues:
+          type: integer
+        lowIssues:
+          type: integer
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/SecurityFinding"
+        scannedAt:
+          type: string
+          format: date-time
+      required:
+        - projectId
+        - score
+        - criticalIssues
+        - highIssues
+        - mediumIssues
+        - lowIssues
+        - findings
+        - scannedAt
+
+    SecurityFinding:
+      type: object
+      properties:
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+        title:
+          type: string
+        description:
+          type: string
+        file:
+          type: string
+        line:
+          type: integer
+      required:
+        - severity
+        - title
+        - description
+
+    DeployRequest:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum: [vercel, netlify, railway, cloudflare]
+        branch:
+          type: string
+      required:
+        - provider
+
+    Deployment:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        provider:
+          type: string
+          enum: [vercel, netlify, railway, cloudflare]
+        status:
+          type: string
+          enum: [queued, building, live, failed, cancelled]
+        url:
+          type: string
+        branch:
+          type: string
+        duration:
+          type: integer
+          description: Build duration in seconds
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - provider
+        - status
+        - createdAt
+
+    Workflow:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        trigger:
+          type: string
+          enum: [manual, schedule, webhook, event]
+        steps:
+          type: integer
+        enabled:
+          type: boolean
+        lastRunAt:
+          type: string
+          format: date-time
+        lastRunStatus:
+          type: string
+          enum: [success, failed, running]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - trigger
+        - steps
+        - enabled
+        - createdAt
+
+    CreateWorkflowRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        trigger:
+          type: string
+          enum: [manual, schedule, webhook, event]
+      required:
+        - name
+        - trigger
+
+    WorkflowRun:
+      type: object
+      properties:
+        runId:
+          type: string
+        workflowId:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, completed, failed]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        logs:
+          type: array
+          items:
+            type: string
+      required:
+        - runId
+        - workflowId
+        - status
+        - startedAt
+
+    AiModel:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        provider:
+          type: string
+        tier:
+          type: string
+          enum: [fast, balanced, powerful]
+        contextWindow:
+          type: integer
+        costPer1kTokens:
+          type: number
+        capabilities:
+          type: array
+          items:
+            type: string
+        recommended:
+          type: boolean
+      required:
+        - id
+        - name
+        - provider
+        - tier
+        - contextWindow
+        - capabilities
+
+    ActivityEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [project_created, project_generated, deployment_started, deployment_live, scan_completed, workflow_run, model_switched]
+        projectId:
+          type: string
+        projectName:
+          type: string
+        summary:
+          type: string
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - summary
+        - createdAt
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalProjects:
+          type: integer
+        liveProjects:
+          type: integer
+        totalDeployments:
+          type: integer
+        activeWorkflows:
+          type: integer
+        avgSecurityScore:
+          type: integer
+        tokensUsedToday:
+          type: integer
+        costToday:
+          type: number
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityEvent"
+      required:
+        - totalProjects
+        - liveProjects
+        - totalDeployments
+        - activeWorkflows
+        - avgSecurityScore
+        - tokensUsedToday
+        - costToday
+        - recentActivity
