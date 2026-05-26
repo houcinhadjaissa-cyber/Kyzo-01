@@ -1,14 +1,17 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Platform, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useGetDashboard } from "@workspace/api-client-react";
 import { ActivityItem } from "@/components/ActivityItem";
 import { SkeletonCard } from "@/components/SkeletonCard";
+import { SelfHealBanner } from "@/components/SelfHealBanner";
+import { NotificationBell } from "@/components/NotificationBell";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { registerForPushNotifications, addNotificationResponseListener } from "@/lib/notifications";
 
 function StatTile({ title, value, icon, color }: { title: string, value: string | number, icon: keyof typeof Feather.glyphMap, color: string }) {
   const colors = useColors();
@@ -27,11 +30,33 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const router = useRouter();
-  
+  const notifListenerRef = useRef<any>(null);
+
   const isWeb = Platform.OS === "web";
   const topPadding = isWeb ? Math.max(insets.top, 67) : insets.top;
 
   const { data: dashboard, isLoading, refetch, isRefetching } = useGetDashboard();
+
+  useEffect(() => {
+    if (!isWeb) {
+      registerForPushNotifications().then((token) => {
+        if (token) {
+          fetch(`${process.env.EXPO_PUBLIC_API_URL ?? ""}/api/notifications/push-token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token, platform: Platform.OS }),
+          }).catch(() => {});
+        }
+      });
+      notifListenerRef.current = addNotificationResponseListener((response) => {
+        const deepLink = response.notification.request.content.data?.deepLink as string | undefined;
+        if (deepLink) router.push(deepLink as any);
+      });
+    }
+    return () => {
+      if (notifListenerRef.current) notifListenerRef.current.remove();
+    };
+  }, []);
 
   const handleNewProject = () => {
     if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -40,7 +65,7 @@ export default function DashboardScreen() {
 
   const handleRunScan = () => {
     if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Placeholder action for Run Scan
+    router.push("/agent");
   };
 
   return (
@@ -55,9 +80,16 @@ export default function DashboardScreen() {
           colors={[`${colors.primary}20`, "transparent"]}
           style={styles.heroGradient}
         >
-          <Text style={[styles.greeting, { color: colors.foreground }]}>Command Center</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>All systems operational.</Text>
+          <View style={styles.heroRow}>
+            <View>
+              <Text style={[styles.greeting, { color: colors.foreground }]}>Command Center</Text>
+              <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>All systems operational.</Text>
+            </View>
+            <NotificationBell />
+          </View>
         </LinearGradient>
+
+        <SelfHealBanner />
 
         {isLoading ? (
           <View style={styles.grid}>
@@ -130,6 +162,11 @@ const styles = StyleSheet.create({
   heroGradient: {
     padding: 24,
     paddingBottom: 32,
+  },
+  heroRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
   greeting: {
     fontSize: 28,

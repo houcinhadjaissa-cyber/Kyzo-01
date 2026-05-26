@@ -462,3 +462,127 @@ export type ListActivityParams = {
 limit?: number;
 };
 
+
+export type NotificationType = typeof NotificationType[keyof typeof NotificationType];
+
+export const NotificationType = {
+  generation_complete: 'generation_complete',
+  generation_failed: 'generation_failed',
+  deployment_live: 'deployment_live',
+  deployment_failed: 'deployment_failed',
+  scan_complete: 'scan_complete',
+  scan_critical: 'scan_critical',
+  agent_fix: 'agent_fix',
+  billing: 'billing',
+  system: 'system',
+} as const;
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  projectId?: string;
+  projectName?: string;
+  read: boolean;
+  deepLink?: string;
+  createdAt: string;
+}
+
+export interface UnreadCount {
+  count: number;
+}
+
+export interface SuccessResponse {
+  success: boolean;
+}
+
+export interface PushTokenRequest {
+  token: string;
+  platform: 'ios' | 'android' | 'web';
+}
+
+export type AgentMode = 'active' | 'paused';
+export type AgentHealth = 'nominal' | 'degraded' | 'error';
+
+export interface AgentStatus {
+  mode: AgentMode;
+  isScanning: boolean;
+  lastScanAt: string;
+  totalFixesApplied: number;
+  totalIssuesDetected: number;
+  uptime: number;
+  health: AgentHealth;
+}
+
+export type AgentFixSeverity = 'critical' | 'high' | 'medium' | 'low';
+export type AgentFixCategory = 'security' | 'performance' | 'type_error' | 'config' | 'dependency';
+export type AgentFixStatus = 'detected' | 'researching' | 'applied' | 'verified' | 'failed';
+
+export interface AgentFix {
+  id: string;
+  issue: string;
+  severity: AgentFixSeverity;
+  category: AgentFixCategory;
+  description: string;
+  solution?: string;
+  status: AgentFixStatus;
+  projectId?: string;
+  projectName?: string;
+  autoApplied: boolean;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export interface ScanJob {
+  jobId: string;
+  status: string;
+  startedAt: string;
+}
+
+export type SubscriptionPlan = 'free' | 'pro' | 'enterprise';
+export type SubscriptionStatus = 'active' | 'cancelled' | 'expired';
+
+export interface SubscriptionUsage {
+  aiTokensUsed: number;
+  aiTokensLimit: number;
+  projectsCount: number;
+  projectsLimit: number;
+  deploymentsThisMonth: number;
+  deploymentsLimit: number;
+}
+
+export interface Subscription {
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  billingCycle: 'monthly' | 'yearly';
+  currentPeriodEnd: string;
+  usage: SubscriptionUsage;
+  features: string[];
+}
+
+export interface Plan {
+  name: string;
+  price: number;
+  features: string[];
+  limits: { projects: number; tokens: number; deployments: number };
+}
+
+export interface UpgradeRequest {
+  plan: 'pro' | 'enterprise';
+}
+
+export interface UpgradeResponse {
+  success: boolean;
+  subscription?: Subscription;
+  checkoutUrl?: string;
+}
+
+export interface GetNotificationsParams {
+  unreadOnly?: string;
+}
+
+export interface GetAgentFixesParams {
+  status?: string;
+  limit?: number;
+}

@@ -32,6 +32,12 @@ tags:
     description: Security pre-deploy checklist
   - name: usage
     description: Token usage and cost tracking
+  - name: notifications
+    description: Push notifications and in-app alerts
+  - name: agent
+    description: Self-healing agent status and fixes
+  - name: subscription
+    description: Subscription plans and billing
 
 paths:
   /healthz:
@@ -372,6 +378,266 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
+
+  /notifications:
+    get:
+      operationId: getNotifications
+      tags: [notifications]
+      summary: List notifications
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Notifications list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/unread-count:
+    get:
+      operationId: getNotificationsUnreadCount
+      tags: [notifications]
+      summary: Get unread notification count
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCount"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: patchNotificationsIdRead
+      tags: [notifications]
+      summary: Mark notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /notifications/read-all:
+    post:
+      operationId: postNotificationsReadAll
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications/{id}:
+    delete:
+      operationId: deleteNotificationsId
+      tags: [notifications]
+      summary: Delete a notification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /notifications/push-token:
+    post:
+      operationId: postNotificationsPushToken
+      tags: [notifications]
+      summary: Register a push notification token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushTokenRequest"
+      responses:
+        "200":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /agent/status:
+    get:
+      operationId: getAgentStatus
+      tags: [agent]
+      summary: Get self-healing agent status
+      responses:
+        "200":
+          description: Agent status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentStatus"
+
+  /agent/fixes:
+    get:
+      operationId: getAgentFixes
+      tags: [agent]
+      summary: List agent-detected fixes
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Fixes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgentFix"
+
+  /agent/fixes/{id}:
+    get:
+      operationId: getAgentFixesId
+      tags: [agent]
+      summary: Get a specific fix
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Fix detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentFix"
+
+  /agent/scan:
+    post:
+      operationId: postAgentScan
+      tags: [agent]
+      summary: Trigger a full agent scan
+      responses:
+        "200":
+          description: Scan started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanJob"
+
+  /agent/pause:
+    post:
+      operationId: postAgentPause
+      tags: [agent]
+      summary: Pause the self-healing agent
+      responses:
+        "200":
+          description: Agent status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentStatus"
+
+  /agent/resume:
+    post:
+      operationId: postAgentResume
+      tags: [agent]
+      summary: Resume the self-healing agent
+      responses:
+        "200":
+          description: Agent status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentStatus"
+
+  /agent/fixes/{id}/approve:
+    post:
+      operationId: postAgentFixesIdApprove
+      tags: [agent]
+      summary: Approve and apply a pending fix
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Applied fix
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentFix"
+
+  /subscription:
+    get:
+      operationId: getSubscription
+      tags: [subscription]
+      summary: Get current subscription
+      responses:
+        "200":
+          description: Subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+
+  /subscription/plans:
+    get:
+      operationId: getSubscriptionPlans
+      tags: [subscription]
+      summary: Get available plans
+      responses:
+        "200":
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/Plan"
+
+  /subscription/upgrade:
+    post:
+      operationId: postSubscriptionUpgrade
+      tags: [subscription]
+      summary: Upgrade subscription plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpgradeRequest"
+      responses:
+        "200":
+          description: Upgrade result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpgradeResponse"
 
 components:
   schemas:
@@ -1021,3 +1287,248 @@ components:
         - totalCostUsd
         - byModel
         - byProject
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [generation_complete, generation_failed, deployment_live, deployment_failed, scan_complete, scan_critical, agent_fix, billing, system]
+        title:
+          type: string
+        body:
+          type: string
+        projectId:
+          type: string
+        projectName:
+          type: string
+        read:
+          type: boolean
+        deepLink:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - title
+        - body
+        - read
+        - createdAt
+
+    UnreadCount:
+      type: object
+      properties:
+        count:
+          type: integer
+      required:
+        - count
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    PushTokenRequest:
+      type: object
+      properties:
+        token:
+          type: string
+        platform:
+          type: string
+          enum: [ios, android, web]
+      required:
+        - token
+        - platform
+
+    AgentStatus:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [active, paused]
+        isScanning:
+          type: boolean
+        lastScanAt:
+          type: string
+          format: date-time
+        totalFixesApplied:
+          type: integer
+        totalIssuesDetected:
+          type: integer
+        uptime:
+          type: number
+        health:
+          type: string
+          enum: [nominal, degraded, error]
+      required:
+        - mode
+        - isScanning
+        - lastScanAt
+        - totalFixesApplied
+        - totalIssuesDetected
+        - uptime
+        - health
+
+    AgentFix:
+      type: object
+      properties:
+        id:
+          type: string
+        issue:
+          type: string
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+        category:
+          type: string
+          enum: [security, performance, type_error, config, dependency]
+        description:
+          type: string
+        solution:
+          type: string
+        status:
+          type: string
+          enum: [detected, researching, applied, verified, failed]
+        projectId:
+          type: string
+        projectName:
+          type: string
+        autoApplied:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - issue
+        - severity
+        - category
+        - description
+        - status
+        - autoApplied
+        - createdAt
+
+    ScanJob:
+      type: object
+      properties:
+        jobId:
+          type: string
+        status:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+      required:
+        - jobId
+        - status
+        - startedAt
+
+    Subscription:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [free, pro, enterprise]
+        status:
+          type: string
+          enum: [active, cancelled, expired]
+        billingCycle:
+          type: string
+          enum: [monthly, yearly]
+        currentPeriodEnd:
+          type: string
+          format: date-time
+        usage:
+          type: object
+          properties:
+            aiTokensUsed:
+              type: integer
+            aiTokensLimit:
+              type: integer
+            projectsCount:
+              type: integer
+            projectsLimit:
+              type: integer
+            deploymentsThisMonth:
+              type: integer
+            deploymentsLimit:
+              type: integer
+          required:
+            - aiTokensUsed
+            - aiTokensLimit
+            - projectsCount
+            - projectsLimit
+            - deploymentsThisMonth
+            - deploymentsLimit
+        features:
+          type: array
+          items:
+            type: string
+      required:
+        - plan
+        - status
+        - billingCycle
+        - currentPeriodEnd
+        - usage
+        - features
+
+    Plan:
+      type: object
+      properties:
+        name:
+          type: string
+        price:
+          type: number
+        features:
+          type: array
+          items:
+            type: string
+        limits:
+          type: object
+          properties:
+            projects:
+              type: integer
+            tokens:
+              type: integer
+            deployments:
+              type: integer
+          required:
+            - projects
+            - tokens
+            - deployments
+      required:
+        - name
+        - price
+        - features
+        - limits
+
+    UpgradeRequest:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [pro, enterprise]
+      required:
+        - plan
+
+    UpgradeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        subscription:
+          $ref: "#/components/schemas/Subscription"
+        checkoutUrl:
+          type: string
+      required:
+        - success

@@ -78,7 +78,7 @@ export default function BuilderScreen() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentModel, setCurrentModel] = useState<{modelId: string, modelName: string, reason: string} | null>(null);
 
-  const stopFnRef = useRef<() => void>();
+  const stopFnRef = useRef<(() => void) | undefined>(undefined);
   const flatListRef = useRef<FlatList>(null);
 
   const handleSend = (text: string) => {

@@ -11,6 +11,9 @@ import conversationsRouter from "./conversations.js";
 import versionsRouter from "./versions.js";
 import checklistRouter from "./checklist.js";
 import usageRouter from "./usage.js";
+import notificationsRouter from "./notifications.js";
+import agentRouter from "./agent.js";
+import subscriptionRouter from "./subscription.js";
 
 const router: IRouter = Router();
 
@@ -26,5 +29,8 @@ router.use(conversationsRouter);
 router.use(versionsRouter);
 router.use(checklistRouter);
 router.use(usageRouter);
+router.use(notificationsRouter);
+router.use(agentRouter);
+router.use(subscriptionRouter);
 
 export default router;

@@ -8,6 +8,7 @@ import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { NotificationBell } from "@/components/NotificationBell";
 
 function NativeTabLayout() {
   return (
@@ -51,6 +52,7 @@ function ClassicTabLayout() {
         headerTitleStyle: {
           color: colors.foreground,
         },
+        headerRight: () => <NotificationBell />,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS ? "transparent" : colors.background,
@@ -80,6 +82,7 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "Dashboard",
+          headerRight: () => null,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="cpu" tintColor={color} size={24} />

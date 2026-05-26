@@ -1465,3 +1465,254 @@ export function useGetDashboard<TData = Awaited<ReturnType<typeof getDashboard>>
 
 
 
+
+import type {
+  Notification,
+  UnreadCount,
+  SuccessResponse,
+  PushTokenRequest,
+  AgentStatus,
+  AgentFix,
+  ScanJob,
+  Subscription,
+  Plan,
+  UpgradeRequest,
+  UpgradeResponse,
+  GetNotificationsParams,
+  GetAgentFixesParams,
+} from './api.schemas';
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export const getGetNotificationsUrl = (params?: GetNotificationsParams) => {
+  const searchParams = new URLSearchParams();
+  if (params?.unreadOnly !== undefined) searchParams.append('unreadOnly', params.unreadOnly);
+  const qs = searchParams.toString();
+  return `/api/notifications${qs ? `?${qs}` : ''}`;
+};
+
+export const getNotifications = async (params?: GetNotificationsParams, options?: RequestInit): Promise<Notification[]> => {
+  return customFetch<Notification[]>(getGetNotificationsUrl(params), { ...options, method: 'GET' });
+};
+
+export const getGetNotificationsQueryKey = (params?: GetNotificationsParams) => ['/api/notifications', ...(params ? [params] : [])] as const;
+
+export function useGetNotifications<TData = Notification[], TError = ErrorType<unknown>>(
+  params?: GetNotificationsParams,
+  options?: { query?: UseQueryOptions<Notification[], TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetNotificationsQueryKey(params);
+  const queryFn: QueryFunction<Notification[]> = ({ signal }) => getNotifications(params, { signal, ...requestOptions });
+  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey };
+}
+
+export const getGetNotificationsUnreadCountUrl = () => `/api/notifications/unread-count`;
+
+export const getNotificationsUnreadCount = async (options?: RequestInit): Promise<UnreadCount> => {
+  return customFetch<UnreadCount>(getGetNotificationsUnreadCountUrl(), { ...options, method: 'GET' });
+};
+
+export const getGetNotificationsUnreadCountQueryKey = () => ['/api/notifications/unread-count'] as const;
+
+export function useGetNotificationsUnreadCount<TData = UnreadCount, TError = ErrorType<unknown>>(
+  options?: { query?: UseQueryOptions<UnreadCount, TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetNotificationsUnreadCountQueryKey();
+  const queryFn: QueryFunction<UnreadCount> = ({ signal }) => getNotificationsUnreadCount({ signal, ...requestOptions });
+  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey };
+}
+
+export const patchNotificationsIdRead = async (id: string, options?: RequestInit): Promise<Notification> => {
+  return customFetch<Notification>(`/api/notifications/${id}/read`, { ...options, method: 'PATCH' });
+};
+
+export function usePatchNotificationsIdRead<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Notification, TError, { id: string }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Notification, TError, { id: string }, TContext> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<Notification, { id: string }> = ({ id }) => patchNotificationsIdRead(id, requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
+}
+
+export const postNotificationsReadAll = async (options?: RequestInit): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>('/api/notifications/read-all', { ...options, method: 'POST' });
+};
+
+export function usePostNotificationsReadAll<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<SuccessResponse, TError, void, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<SuccessResponse, TError, void, TContext> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<SuccessResponse, void> = () => postNotificationsReadAll(requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
+}
+
+export const deleteNotificationsId = async (id: string, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(`/api/notifications/${id}`, { ...options, method: 'DELETE' });
+};
+
+export function useDeleteNotificationsId<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<void, TError, { id: string }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<void, TError, { id: string }, TContext> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<void, { id: string }> = ({ id }) => deleteNotificationsId(id, requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
+}
+
+export const postNotificationsPushToken = async (data: PushTokenRequest, options?: RequestInit): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>('/api/notifications/push-token', { ...options, method: 'POST', headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) }, body: JSON.stringify(data) });
+};
+
+export function usePostNotificationsPushToken<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<SuccessResponse, TError, PushTokenRequest, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<SuccessResponse, TError, PushTokenRequest, TContext> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<SuccessResponse, PushTokenRequest> = (data) => postNotificationsPushToken(data, requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
+}
+
+// ─── Agent ────────────────────────────────────────────────────────────────────
+
+export const getGetAgentStatusUrl = () => `/api/agent/status`;
+
+export const getAgentStatus = async (options?: RequestInit): Promise<AgentStatus> => {
+  return customFetch<AgentStatus>(getGetAgentStatusUrl(), { ...options, method: 'GET' });
+};
+
+export const getGetAgentStatusQueryKey = () => ['/api/agent/status'] as const;
+
+export function useGetAgentStatus<TData = AgentStatus, TError = ErrorType<unknown>>(
+  options?: { query?: UseQueryOptions<AgentStatus, TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetAgentStatusQueryKey();
+  const queryFn: QueryFunction<AgentStatus> = ({ signal }) => getAgentStatus({ signal, ...requestOptions });
+  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey };
+}
+
+export const getGetAgentFixesUrl = (params?: GetAgentFixesParams) => {
+  const searchParams = new URLSearchParams();
+  if (params?.status !== undefined) searchParams.append('status', params.status);
+  if (params?.limit !== undefined) searchParams.append('limit', String(params.limit));
+  const qs = searchParams.toString();
+  return `/api/agent/fixes${qs ? `?${qs}` : ''}`;
+};
+
+export const getAgentFixes = async (params?: GetAgentFixesParams, options?: RequestInit): Promise<AgentFix[]> => {
+  return customFetch<AgentFix[]>(getGetAgentFixesUrl(params), { ...options, method: 'GET' });
+};
+
+export const getGetAgentFixesQueryKey = (params?: GetAgentFixesParams) => ['/api/agent/fixes', ...(params ? [params] : [])] as const;
+
+export function useGetAgentFixes<TData = AgentFix[], TError = ErrorType<unknown>>(
+  params?: GetAgentFixesParams,
+  options?: { query?: UseQueryOptions<AgentFix[], TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetAgentFixesQueryKey(params);
+  const queryFn: QueryFunction<AgentFix[]> = ({ signal }) => getAgentFixes(params, { signal, ...requestOptions });
+  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey };
+}
+
+export const postAgentScan = async (options?: RequestInit): Promise<ScanJob> => {
+  return customFetch<ScanJob>('/api/agent/scan', { ...options, method: 'POST' });
+};
+
+export function usePostAgentScan<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<ScanJob, TError, void, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<ScanJob, TError, void, TContext> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<ScanJob, void> = () => postAgentScan(requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
+}
+
+export const postAgentPause = async (options?: RequestInit): Promise<AgentStatus> => {
+  return customFetch<AgentStatus>('/api/agent/pause', { ...options, method: 'POST' });
+};
+
+export function usePostAgentPause<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<AgentStatus, TError, void, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<AgentStatus, TError, void, TContext> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<AgentStatus, void> = () => postAgentPause(requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
+}
+
+export const postAgentResume = async (options?: RequestInit): Promise<AgentStatus> => {
+  return customFetch<AgentStatus>('/api/agent/resume', { ...options, method: 'POST' });
+};
+
+export function usePostAgentResume<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<AgentStatus, TError, void, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<AgentStatus, TError, void, TContext> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<AgentStatus, void> = () => postAgentResume(requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
+}
+
+export const postAgentFixesIdApprove = async (id: string, options?: RequestInit): Promise<AgentFix> => {
+  return customFetch<AgentFix>(`/api/agent/fixes/${id}/approve`, { ...options, method: 'POST' });
+};
+
+export function usePostAgentFixesIdApprove<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<AgentFix, TError, { id: string }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<AgentFix, TError, { id: string }, TContext> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<AgentFix, { id: string }> = ({ id }) => postAgentFixesIdApprove(id, requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
+}
+
+// ─── Subscription ─────────────────────────────────────────────────────────────
+
+export const getGetSubscriptionUrl = () => `/api/subscription`;
+
+export const getSubscription = async (options?: RequestInit): Promise<Subscription> => {
+  return customFetch<Subscription>(getGetSubscriptionUrl(), { ...options, method: 'GET' });
+};
+
+export const getGetSubscriptionQueryKey = () => ['/api/subscription'] as const;
+
+export function useGetSubscription<TData = Subscription, TError = ErrorType<unknown>>(
+  options?: { query?: UseQueryOptions<Subscription, TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetSubscriptionQueryKey();
+  const queryFn: QueryFunction<Subscription> = ({ signal }) => getSubscription({ signal, ...requestOptions });
+  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey };
+}
+
+export const getGetSubscriptionPlansUrl = () => `/api/subscription/plans`;
+
+export const getSubscriptionPlans = async (options?: RequestInit): Promise<Record<string, Plan>> => {
+  return customFetch<Record<string, Plan>>(getGetSubscriptionPlansUrl(), { ...options, method: 'GET' });
+};
+
+export const getGetSubscriptionPlansQueryKey = () => ['/api/subscription/plans'] as const;
+
+export function useGetSubscriptionPlans<TData = Record<string, Plan>, TError = ErrorType<unknown>>(
+  options?: { query?: UseQueryOptions<Record<string, Plan>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetSubscriptionPlansQueryKey();
+  const queryFn: QueryFunction<Record<string, Plan>> = ({ signal }) => getSubscriptionPlans({ signal, ...requestOptions });
+  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey };
+}
+
+export const postSubscriptionUpgrade = async (data: { data: UpgradeRequest }, options?: RequestInit): Promise<UpgradeResponse> => {
+  return customFetch<UpgradeResponse>('/api/subscription/upgrade', { ...options, method: 'POST', headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) }, body: JSON.stringify(data.data) });
+};
+
+export function usePostSubscriptionUpgrade<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<UpgradeResponse, TError, { data: UpgradeRequest }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<UpgradeResponse, TError, { data: UpgradeRequest }, TContext> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<UpgradeResponse, { data: UpgradeRequest }> = (vars) => postSubscriptionUpgrade(vars, requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
+}
