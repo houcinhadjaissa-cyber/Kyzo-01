@@ -1,22 +1,19 @@
-// This is the fixed code for your Vercel API
+// Fixed for Express 5 + Vercel Serverless
 import express from 'express';
 
-// Tell Vercel how to run this
 export const config = {
   runtime: 'nodejs',
 };
 
-// Start the app
 const app = express();
 app.use(express.json());
 
-// This line catches ALL requests safely without crashing
-// Notice we use '/*' here which works perfectly
-app.get('/*', async (req, res) => {
+// ⚠️ IMPORTANT: In Express 5, use '*' without slash for catch-all
+// DO NOT use '/*' or '/:param*' — they break in Express 5!
+app.get('*', async (req, res) => {
   try {
-    // Just send back a simple message to prove it works
     res.status(200).json({ 
-      message: "✅ Success! Your API is working.",
+      message: "✅ API is working!", 
       path: req.path 
     });
   } catch (error) {
@@ -25,5 +22,4 @@ app.get('/*', async (req, res) => {
   }
 });
 
-// Send the app to Vercel
 export default app;
