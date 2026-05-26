@@ -1,25 +1,23 @@
-import app from "./app";
-import { logger } from "./lib/logger";
+import app from "./app.js";
+import { logger } from "./lib/logger.js";
 
-const rawPort = process.env["PORT"];
+// Export the app for Vercel serverless functions
+export default app;
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
+// Only start a traditional server if NOT running on Vercel (i.e., local dev)
+if (!process.env["VERCEL"]) {
+  const rawPort = process.env["PORT"] ?? "3000";
+  const port = Number(rawPort);
 
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
+  if (Number.isNaN(port) || port <= 0) {
+    throw new Error(`Invalid PORT value: "${rawPort}"`);
   }
 
-  logger.info({ port }, "Server listening");
-});
+  app.listen(port, (err) => {
+    if (err) {
+      logger.error({ err }, "Error listening on port");
+      process.exit(1);
+    }
+    logger.info({ port }, "Server listening");
+  });
+}
