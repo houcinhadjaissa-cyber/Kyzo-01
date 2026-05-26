@@ -38,6 +38,9 @@ function RootLayoutNav() {
       <Stack.Screen name="project/new" options={{ title: "New Project", presentation: "modal" }} />
       <Stack.Screen name="project/[id]" options={{ title: "Project Details" }} />
       <Stack.Screen name="models" options={{ title: "AI Models", presentation: "modal" }} />
+      <Stack.Screen name="builder/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="project/versions" options={{ title: "Version History", headerStyle: { backgroundColor: colors.background }, headerTintColor: colors.foreground }} />
+      <Stack.Screen name="usage" options={{ title: "AI Usage", presentation: "modal", headerStyle: { backgroundColor: colors.background }, headerTintColor: colors.foreground }} />
     </Stack>
   );
 }

@@ -83,20 +83,20 @@ router.post("/workflows", (req, res) => {
 
 router.get("/workflows/:id", (req, res) => {
   const wf = workflows.find((w) => w.id === req.params["id"]);
-  if (!wf) return res.status(404).json({ error: "Not found" });
+  if (!wf) { res.status(404).json({ error: "Not found" }); return; }
   res.json(wf);
 });
 
 router.delete("/workflows/:id", (req, res) => {
   const idx = workflows.findIndex((w) => w.id === req.params["id"]);
-  if (idx === -1) return res.status(404).json({ error: "Not found" });
+  if (idx === -1) { res.status(404).json({ error: "Not found" }); return; }
   workflows.splice(idx, 1);
   res.status(204).send();
 });
 
 router.post("/workflows/:id/run", (req, res) => {
   const wf = workflows.find((w) => w.id === req.params["id"]);
-  if (!wf) return res.status(404).json({ error: "Not found" });
+  if (!wf) { res.status(404).json({ error: "Not found" }); return; }
   wf.lastRunAt = new Date().toISOString();
   wf.lastRunStatus = "running";
   setTimeout(() => {

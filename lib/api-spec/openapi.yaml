@@ -22,6 +22,16 @@ tags:
     description: Activity and audit log
   - name: dashboard
     description: Dashboard aggregates
+  - name: ai
+    description: AI generation and model routing
+  - name: conversations
+    description: Project AI conversation memory
+  - name: versions
+    description: Project version history
+  - name: checklist
+    description: Security pre-deploy checklist
+  - name: usage
+    description: Token usage and cost tracking
 
 paths:
   /healthz:
@@ -727,3 +737,287 @@ components:
         - tokensUsedToday
         - costToday
         - recentActivity
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        title:
+          type: string
+        modelId:
+          type: string
+        totalTokens:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - title
+        - modelId
+        - totalTokens
+        - createdAt
+        - updatedAt
+
+    ConversationMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        conversationId:
+          type: string
+        projectId:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+        modelId:
+          type: string
+        tokensUsed:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - conversationId
+        - projectId
+        - role
+        - content
+        - createdAt
+
+    SendMessageRequest:
+      type: object
+      properties:
+        conversationId:
+          type: string
+        content:
+          type: string
+        taskType:
+          type: string
+          enum: [code_generation, ui_styling, architecture, security_audit, debugging, general]
+      required:
+        - content
+
+    SendMessageResponse:
+      type: object
+      properties:
+        userMessage:
+          $ref: "#/components/schemas/ConversationMessage"
+        assistantMessage:
+          $ref: "#/components/schemas/ConversationMessage"
+        modelUsed:
+          type: string
+        tokensUsed:
+          type: integer
+        conversationId:
+          type: string
+      required:
+        - userMessage
+        - assistantMessage
+        - modelUsed
+        - tokensUsed
+        - conversationId
+
+    ProjectVersion:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        version:
+          type: string
+        major:
+          type: integer
+        minor:
+          type: integer
+        patch:
+          type: integer
+        changelog:
+          type: string
+        deployedUrl:
+          type: string
+        securityScore:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - version
+        - major
+        - minor
+        - patch
+        - changelog
+        - createdAt
+
+    CreateVersionRequest:
+      type: object
+      properties:
+        changelog:
+          type: string
+        bumpType:
+          type: string
+          enum: [major, minor, patch]
+      required:
+        - changelog
+        - bumpType
+
+    SecurityChecklist:
+      type: object
+      properties:
+        projectId:
+          type: string
+        authConfigured:
+          type: boolean
+        rateLimitingEnabled:
+          type: boolean
+        inputValidation:
+          type: boolean
+        corsConfigured:
+          type: boolean
+        helmetEnabled:
+          type: boolean
+        envSecretsProtected:
+          type: boolean
+        sqlInjectionPrevented:
+          type: boolean
+        xssProtection:
+          type: boolean
+        httpsOnly:
+          type: boolean
+        dependenciesScanned:
+          type: boolean
+        passed:
+          type: boolean
+        score:
+          type: integer
+        lastCheckedAt:
+          type: string
+          format: date-time
+        passedAt:
+          type: string
+          format: date-time
+      required:
+        - projectId
+        - authConfigured
+        - rateLimitingEnabled
+        - inputValidation
+        - corsConfigured
+        - helmetEnabled
+        - envSecretsProtected
+        - sqlInjectionPrevented
+        - xssProtection
+        - httpsOnly
+        - dependenciesScanned
+        - passed
+        - score
+
+    UpdateChecklistItemRequest:
+      type: object
+      properties:
+        value:
+          type: boolean
+      required:
+        - value
+
+    AiRouteRequest:
+      type: object
+      properties:
+        taskType:
+          type: string
+          enum: [code_generation, ui_styling, architecture, security_audit, debugging, general]
+        complexity:
+          type: number
+          minimum: 0
+          maximum: 1
+      required:
+        - taskType
+
+    AiRouteResponse:
+      type: object
+      properties:
+        modelId:
+          type: string
+        modelName:
+          type: string
+        tier:
+          type: string
+          enum: [fast, balanced, powerful]
+        reason:
+          type: string
+        estimatedTokens:
+          type: integer
+        estimatedCostUsd:
+          type: number
+      required:
+        - modelId
+        - modelName
+        - tier
+        - reason
+
+    UsageSummary:
+      type: object
+      properties:
+        todayTokens:
+          type: integer
+        todayCostUsd:
+          type: number
+        monthTokens:
+          type: integer
+        monthCostUsd:
+          type: number
+        totalTokens:
+          type: integer
+        totalCostUsd:
+          type: number
+        byModel:
+          type: array
+          items:
+            type: object
+            properties:
+              modelId:
+                type: string
+              tokens:
+                type: integer
+              costUsd:
+                type: number
+            required:
+              - modelId
+              - tokens
+              - costUsd
+        byProject:
+          type: array
+          items:
+            type: object
+            properties:
+              projectId:
+                type: string
+              tokens:
+                type: integer
+              costUsd:
+                type: number
+            required:
+              - projectId
+              - tokens
+              - costUsd
+      required:
+        - todayTokens
+        - todayCostUsd
+        - monthTokens
+        - monthCostUsd
+        - totalTokens
+        - totalCostUsd
+        - byModel
+        - byProject

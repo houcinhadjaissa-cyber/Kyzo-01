@@ -291,6 +291,173 @@ export interface DashboardSummary {
   recentActivity: ActivityEvent[];
 }
 
+export interface Conversation {
+  id: string;
+  projectId: string;
+  title: string;
+  modelId: string;
+  totalTokens: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ConversationMessageRole = typeof ConversationMessageRole[keyof typeof ConversationMessageRole];
+
+
+export const ConversationMessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+  system: 'system',
+} as const;
+
+export interface ConversationMessage {
+  id: string;
+  conversationId: string;
+  projectId: string;
+  role: ConversationMessageRole;
+  content: string;
+  modelId?: string;
+  tokensUsed?: number;
+  createdAt: string;
+}
+
+export type SendMessageRequestTaskType = typeof SendMessageRequestTaskType[keyof typeof SendMessageRequestTaskType];
+
+
+export const SendMessageRequestTaskType = {
+  code_generation: 'code_generation',
+  ui_styling: 'ui_styling',
+  architecture: 'architecture',
+  security_audit: 'security_audit',
+  debugging: 'debugging',
+  general: 'general',
+} as const;
+
+export interface SendMessageRequest {
+  conversationId?: string;
+  content: string;
+  taskType?: SendMessageRequestTaskType;
+}
+
+export interface SendMessageResponse {
+  userMessage: ConversationMessage;
+  assistantMessage: ConversationMessage;
+  modelUsed: string;
+  tokensUsed: number;
+  conversationId: string;
+}
+
+export interface ProjectVersion {
+  id: string;
+  projectId: string;
+  version: string;
+  major: number;
+  minor: number;
+  patch: number;
+  changelog: string;
+  deployedUrl?: string;
+  securityScore?: number;
+  createdAt: string;
+}
+
+export type CreateVersionRequestBumpType = typeof CreateVersionRequestBumpType[keyof typeof CreateVersionRequestBumpType];
+
+
+export const CreateVersionRequestBumpType = {
+  major: 'major',
+  minor: 'minor',
+  patch: 'patch',
+} as const;
+
+export interface CreateVersionRequest {
+  changelog: string;
+  bumpType: CreateVersionRequestBumpType;
+}
+
+export interface SecurityChecklist {
+  projectId: string;
+  authConfigured: boolean;
+  rateLimitingEnabled: boolean;
+  inputValidation: boolean;
+  corsConfigured: boolean;
+  helmetEnabled: boolean;
+  envSecretsProtected: boolean;
+  sqlInjectionPrevented: boolean;
+  xssProtection: boolean;
+  httpsOnly: boolean;
+  dependenciesScanned: boolean;
+  passed: boolean;
+  score: number;
+  lastCheckedAt?: string;
+  passedAt?: string;
+}
+
+export interface UpdateChecklistItemRequest {
+  value: boolean;
+}
+
+export type AiRouteRequestTaskType = typeof AiRouteRequestTaskType[keyof typeof AiRouteRequestTaskType];
+
+
+export const AiRouteRequestTaskType = {
+  code_generation: 'code_generation',
+  ui_styling: 'ui_styling',
+  architecture: 'architecture',
+  security_audit: 'security_audit',
+  debugging: 'debugging',
+  general: 'general',
+} as const;
+
+export interface AiRouteRequest {
+  taskType: AiRouteRequestTaskType;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  complexity?: number;
+}
+
+export type AiRouteResponseTier = typeof AiRouteResponseTier[keyof typeof AiRouteResponseTier];
+
+
+export const AiRouteResponseTier = {
+  fast: 'fast',
+  balanced: 'balanced',
+  powerful: 'powerful',
+} as const;
+
+export interface AiRouteResponse {
+  modelId: string;
+  modelName: string;
+  tier: AiRouteResponseTier;
+  reason: string;
+  estimatedTokens?: number;
+  estimatedCostUsd?: number;
+}
+
+export type UsageSummaryByModelItem = {
+  modelId: string;
+  tokens: number;
+  costUsd: number;
+};
+
+export type UsageSummaryByProjectItem = {
+  projectId: string;
+  tokens: number;
+  costUsd: number;
+};
+
+export interface UsageSummary {
+  todayTokens: number;
+  todayCostUsd: number;
+  monthTokens: number;
+  monthCostUsd: number;
+  totalTokens: number;
+  totalCostUsd: number;
+  byModel: UsageSummaryByModelItem[];
+  byProject: UsageSummaryByProjectItem[];
+}
+
 export type ListActivityParams = {
 limit?: number;
 };

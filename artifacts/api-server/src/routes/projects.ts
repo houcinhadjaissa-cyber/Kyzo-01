@@ -76,27 +76,27 @@ router.post("/projects", (req, res) => {
 
 router.get("/projects/:id", (req, res) => {
   const project = projects.find((p) => p.id === req.params["id"]);
-  if (!project) return res.status(404).json({ error: "Not found" });
+  if (!project) { res.status(404).json({ error: "Not found" }); return; }
   res.json(project);
 });
 
 router.patch("/projects/:id", (req, res) => {
   const idx = projects.findIndex((p) => p.id === req.params["id"]);
-  if (idx === -1) return res.status(404).json({ error: "Not found" });
+  if (idx === -1) { res.status(404).json({ error: "Not found" }); return; }
   projects[idx] = { ...projects[idx]!, ...req.body, updatedAt: new Date().toISOString() };
   res.json(projects[idx]);
 });
 
 router.delete("/projects/:id", (req, res) => {
   const idx = projects.findIndex((p) => p.id === req.params["id"]);
-  if (idx === -1) return res.status(404).json({ error: "Not found" });
+  if (idx === -1) { res.status(404).json({ error: "Not found" }); return; }
   projects.splice(idx, 1);
   res.status(204).send();
 });
 
 router.post("/projects/:id/generate", (req, res) => {
   const project = projects.find((p) => p.id === req.params["id"]);
-  if (!project) return res.status(404).json({ error: "Not found" });
+  if (!project) { res.status(404).json({ error: "Not found" }); return; }
   project.status = "generating";
   project.updatedAt = new Date().toISOString();
   setTimeout(() => {
@@ -116,7 +116,7 @@ router.post("/projects/:id/generate", (req, res) => {
 
 router.post("/projects/:id/scan", (req, res) => {
   const project = projects.find((p) => p.id === req.params["id"]);
-  if (!project) return res.status(404).json({ error: "Not found" });
+  if (!project) { res.status(404).json({ error: "Not found" }); return; }
   const score = project.securityScore ?? Math.floor(70 + Math.random() * 30);
   res.json({
     projectId: project.id,
@@ -147,7 +147,7 @@ router.post("/projects/:id/scan", (req, res) => {
 
 router.post("/projects/:id/deploy", (req, res) => {
   const project = projects.find((p) => p.id === req.params["id"]);
-  if (!project) return res.status(404).json({ error: "Not found" });
+  if (!project) { res.status(404).json({ error: "Not found" }); return; }
   const { provider = "vercel" } = req.body as { provider: string };
   project.status = "deploying";
   project.updatedAt = new Date().toISOString();
