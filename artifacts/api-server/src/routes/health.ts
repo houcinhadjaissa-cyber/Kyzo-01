@@ -1,11 +1,16 @@
-import { Router, type IRouter } from "express";
-import { HealthCheckResponse } from "@workspace/api-zod";
+// artifacts/api-server/src/routes/health.ts
+import { Router, Request, Response } from 'express';
 
-const router: IRouter = Router();
+const router = Router();
 
-router.get("/healthz", (_req, res) => {
-  const data = HealthCheckResponse.parse({ status: "ok" });
-  res.json(data);
+router.get('/', (req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'aios-api',
+    env: process.env.NODE_ENV || 'development'
+  });
 });
 
+// Prevent TS "emit skipped" by ensuring a default export
 export default router;
