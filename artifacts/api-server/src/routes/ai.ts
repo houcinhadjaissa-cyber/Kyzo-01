@@ -1,4 +1,5 @@
-import { Router, type Request, type Response as ExpressResponse } from "express";
+// artifacts/api-server/src/routes/ai.ts — FINAL FIXED VERSION
+import { Router, type Request as ExpressRequest, type Response as ExpressResponse } from "express";
 import { db } from "@workspace/db";
 import { messagesTable, conversationsTable, usageLogsTable } from "@workspace/db";
 
@@ -49,7 +50,7 @@ async function getOrCreateConvId(
   return newConv!.id;
 }
 
-router.post("/ai/route", (req: Request, res: ExpressResponse) => {
+router.post("/ai/route", (req: ExpressRequest, res: ExpressResponse) => {
   const { taskType = "general", complexity = 0.5 } = req.body as { taskType: string; complexity: number };
   const model = routeModel(taskType, complexity);
   res.json({
@@ -62,7 +63,7 @@ router.post("/ai/route", (req: Request, res: ExpressResponse) => {
   });
 });
 
-router.post("/projects/:id/ai/message", async (req: Request, res: ExpressResponse) => {
+router.post("/projects/:id/ai/message", async (req: ExpressRequest, res: ExpressResponse) => {
   const projectId = String(req.params["id"]);
   const rawBody = req.body as Record<string, unknown>;
   const content = String(rawBody["content"] ?? "");
@@ -99,7 +100,7 @@ When generating code, always explain: what it does, why it's secure, and how to 
 Keep responses clear and jargon-free. This user builds from their phone with no coding experience.`;
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const apiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
@@ -118,13 +119,13 @@ Keep responses clear and jargon-free. This user builds from their phone with no 
       }),
     });
 
-    if (!response.ok) {
-      const err = await response.text();
+    if (!apiRes.ok) {
+      const err = await apiRes.text();
       (req as any).log.error({ err, model: model.id }, "OpenRouter API error");
       res.status(502).json({ error: "AI model unavailable, try again shortly", detail: err }); return;
     }
 
-    const data = await response.json() as {
+    const data = await apiRes.json() as {
       choices: Array<{ message: { content: string } }>;
       usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
     };
@@ -165,7 +166,7 @@ Keep responses clear and jargon-free. This user builds from their phone with no 
   }
 });
 
-router.get("/projects/:id/ai/stream", async (req: Request, res: ExpressResponse) => {
+router.get("/projects/:id/ai/stream", async (req: ExpressRequest, res: ExpressResponse) => {
   const projectId = String(req.params["id"]);
   const rawPrompt = req.query["prompt"];
   const rawTaskType = req.query["taskType"];
@@ -218,7 +219,7 @@ Always generate complete, copy-paste-ready code. Follow OWASP security best prac
 Keep explanations clear and jargon-free. This user builds from their phone with zero coding experience.`;
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const apiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
@@ -238,12 +239,12 @@ Keep explanations clear and jargon-free. This user builds from their phone with 
       }),
     });
 
-    if (!response.ok || !response.body) {
+    if (!apiRes.ok || !apiRes.body) {
       sendEvent("error", { message: "AI model unavailable" });
       res.end(); return;
     }
 
-    const reader = response.body.getReader();
+    const reader = apiRes.body.getReader();
     const decoder = new TextDecoder();
     let fullContent = "";
     let totalTokens = 0;
