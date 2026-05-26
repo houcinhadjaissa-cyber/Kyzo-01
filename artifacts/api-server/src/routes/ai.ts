@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type Request, type Response as ExpressResponse } from "express";
 import { db } from "@workspace/db";
 import { messagesTable, conversationsTable, usageLogsTable } from "@workspace/db";
 
@@ -49,7 +49,7 @@ async function getOrCreateConvId(
   return newConv!.id;
 }
 
-router.post("/ai/route", (req, res) => {
+router.post("/ai/route", (req: Request, res: ExpressResponse) => {
   const { taskType = "general", complexity = 0.5 } = req.body as { taskType: string; complexity: number };
   const model = routeModel(taskType, complexity);
   res.json({
@@ -62,7 +62,7 @@ router.post("/ai/route", (req, res) => {
   });
 });
 
-router.post("/projects/:id/ai/message", async (req: Request, res: Response) => {
+router.post("/projects/:id/ai/message", async (req: Request, res: ExpressResponse) => {
   const projectId = String(req.params["id"]);
   const rawBody = req.body as Record<string, unknown>;
   const content = String(rawBody["content"] ?? "");
@@ -120,7 +120,7 @@ Keep responses clear and jargon-free. This user builds from their phone with no 
 
     if (!response.ok) {
       const err = await response.text();
-      req.log.error({ err, model: model.id }, "OpenRouter API error");
+      (req as any).log.error({ err, model: model.id }, "OpenRouter API error");
       res.status(502).json({ error: "AI model unavailable, try again shortly", detail: err }); return;
     }
 
@@ -160,12 +160,12 @@ Keep responses clear and jargon-free. This user builds from their phone with no 
       conversationId: convId,
     });
   } catch (err) {
-    req.log.error({ err }, "AI generation failed");
+    (req as any).log.error({ err }, "AI generation failed");
     res.status(500).json({ error: "AI generation failed" });
   }
 });
 
-router.get("/projects/:id/ai/stream", async (req: Request, res: Response) => {
+router.get("/projects/:id/ai/stream", async (req: Request, res: ExpressResponse) => {
   const projectId = String(req.params["id"]);
   const rawPrompt = req.query["prompt"];
   const rawTaskType = req.query["taskType"];
@@ -303,7 +303,7 @@ Keep explanations clear and jargon-free. This user builds from their phone with 
     });
     res.end();
   } catch (err) {
-    req.log.error({ err }, "Streaming AI failed");
+    (req as any).log.error({ err }, "Streaming AI failed");
     sendEvent("error", { message: "Stream failed" });
     res.end();
   }
