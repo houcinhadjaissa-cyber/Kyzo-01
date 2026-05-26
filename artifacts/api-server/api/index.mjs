@@ -1,24 +1,14 @@
-import express from 'express';
-import { neon } from '@neondatabase/serverless';
+// Vercel serverless function entry point
 
-const sql = neon(process.env.DATABASE_URL);
-
+// 1. Tell Vercel to use the Node.js runtime (Required!)
 export const config = {
-  runtime: 'nodejs18.x',
+  runtime: 'nodejs', // Changed from 'nodejs18.x' to just 'nodejs'
 };
 
-const app = express();
-app.use(express.json());
+// 2. Import your bundled Express app
+// Note: If you get an error about '.mjs', try changing '../dist/index.mjs' to '../dist/index.js'
+// But usually, if your build output is .mjs, keep it as is.
+import app from "../dist/index.mjs";
 
-// ✅ FIXED: Use /* instead of *
-app.get('/*', async (req, res) => {
-  try {
-    const result = await sql`SELECT version()`;
-    res.json({ message: 'API is working!', dbVersion: result[0].version });
-  } catch (error) {
-    console.error('API Error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
+// 3. Export the app as the default handler
 export default app;
