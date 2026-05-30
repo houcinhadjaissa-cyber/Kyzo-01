@@ -369,3 +369,487 @@ export const GetDashboardResponse = zod.object({
 })
 
 
+/**
+ * @summary List notifications
+ */
+export const GetNotificationsQueryParams = zod.object({
+  "unreadOnly": zod.coerce.string().optional()
+})
+
+export const GetNotificationsResponseItem = zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['generation_complete', 'generation_failed', 'deployment_live', 'deployment_failed', 'scan_complete', 'scan_critical', 'agent_fix', 'billing', 'system']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "projectId": zod.string().optional(),
+  "projectName": zod.string().optional(),
+  "read": zod.boolean(),
+  "deepLink": zod.string().optional(),
+  "createdAt": zod.coerce.date()
+})
+export const GetNotificationsResponse = zod.array(GetNotificationsResponseItem)
+
+
+/**
+ * @summary Get unread notification count
+ */
+export const GetNotificationsUnreadCountResponse = zod.object({
+  "count": zod.number()
+})
+
+
+/**
+ * @summary Mark notification as read
+ */
+export const PatchNotificationsIdReadParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const PatchNotificationsIdReadResponse = zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['generation_complete', 'generation_failed', 'deployment_live', 'deployment_failed', 'scan_complete', 'scan_critical', 'agent_fix', 'billing', 'system']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "projectId": zod.string().optional(),
+  "projectName": zod.string().optional(),
+  "read": zod.boolean(),
+  "deepLink": zod.string().optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Mark all notifications as read
+ */
+export const PostNotificationsReadAllResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Delete a notification
+ */
+export const DeleteNotificationsIdParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+/**
+ * @summary Register a push notification token
+ */
+export const PostNotificationsPushTokenBody = zod.object({
+  "token": zod.string(),
+  "platform": zod.enum(['ios', 'android', 'web'])
+})
+
+export const PostNotificationsPushTokenResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Get self-healing agent status
+ */
+export const GetAgentStatusResponse = zod.object({
+  "mode": zod.enum(['active', 'paused']),
+  "isScanning": zod.boolean(),
+  "lastScanAt": zod.coerce.date(),
+  "totalFixesApplied": zod.number(),
+  "totalIssuesDetected": zod.number(),
+  "uptime": zod.number(),
+  "health": zod.enum(['nominal', 'degraded', 'error'])
+})
+
+
+/**
+ * @summary List agent-detected fixes
+ */
+export const GetAgentFixesQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const GetAgentFixesResponseItem = zod.object({
+  "id": zod.string(),
+  "issue": zod.string(),
+  "severity": zod.enum(['critical', 'high', 'medium', 'low']),
+  "category": zod.enum(['security', 'performance', 'type_error', 'config', 'dependency']),
+  "description": zod.string(),
+  "solution": zod.string().optional(),
+  "status": zod.enum(['detected', 'researching', 'applied', 'verified', 'failed']),
+  "projectId": zod.string().optional(),
+  "projectName": zod.string().optional(),
+  "autoApplied": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "resolvedAt": zod.coerce.date().optional()
+})
+export const GetAgentFixesResponse = zod.array(GetAgentFixesResponseItem)
+
+
+/**
+ * @summary Get a specific fix
+ */
+export const GetAgentFixesIdParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetAgentFixesIdResponse = zod.object({
+  "id": zod.string(),
+  "issue": zod.string(),
+  "severity": zod.enum(['critical', 'high', 'medium', 'low']),
+  "category": zod.enum(['security', 'performance', 'type_error', 'config', 'dependency']),
+  "description": zod.string(),
+  "solution": zod.string().optional(),
+  "status": zod.enum(['detected', 'researching', 'applied', 'verified', 'failed']),
+  "projectId": zod.string().optional(),
+  "projectName": zod.string().optional(),
+  "autoApplied": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "resolvedAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Trigger a full agent scan
+ */
+export const PostAgentScanResponse = zod.object({
+  "jobId": zod.string(),
+  "status": zod.string(),
+  "startedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Pause the self-healing agent
+ */
+export const PostAgentPauseResponse = zod.object({
+  "mode": zod.enum(['active', 'paused']),
+  "isScanning": zod.boolean(),
+  "lastScanAt": zod.coerce.date(),
+  "totalFixesApplied": zod.number(),
+  "totalIssuesDetected": zod.number(),
+  "uptime": zod.number(),
+  "health": zod.enum(['nominal', 'degraded', 'error'])
+})
+
+
+/**
+ * @summary Resume the self-healing agent
+ */
+export const PostAgentResumeResponse = zod.object({
+  "mode": zod.enum(['active', 'paused']),
+  "isScanning": zod.boolean(),
+  "lastScanAt": zod.coerce.date(),
+  "totalFixesApplied": zod.number(),
+  "totalIssuesDetected": zod.number(),
+  "uptime": zod.number(),
+  "health": zod.enum(['nominal', 'degraded', 'error'])
+})
+
+
+/**
+ * @summary Approve and apply a pending fix
+ */
+export const PostAgentFixesIdApproveParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const PostAgentFixesIdApproveResponse = zod.object({
+  "id": zod.string(),
+  "issue": zod.string(),
+  "severity": zod.enum(['critical', 'high', 'medium', 'low']),
+  "category": zod.enum(['security', 'performance', 'type_error', 'config', 'dependency']),
+  "description": zod.string(),
+  "solution": zod.string().optional(),
+  "status": zod.enum(['detected', 'researching', 'applied', 'verified', 'failed']),
+  "projectId": zod.string().optional(),
+  "projectName": zod.string().optional(),
+  "autoApplied": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "resolvedAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Get current subscription
+ */
+export const GetSubscriptionResponse = zod.object({
+  "plan": zod.enum(['free', 'pro', 'enterprise']),
+  "status": zod.enum(['active', 'cancelled', 'expired']),
+  "billingCycle": zod.enum(['monthly', 'yearly']),
+  "currentPeriodEnd": zod.coerce.date(),
+  "usage": zod.object({
+  "aiTokensUsed": zod.number(),
+  "aiTokensLimit": zod.number(),
+  "projectsCount": zod.number(),
+  "projectsLimit": zod.number(),
+  "deploymentsThisMonth": zod.number(),
+  "deploymentsLimit": zod.number()
+}),
+  "features": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Get available plans
+ */
+export const GetSubscriptionPlansResponse = zod.record(zod.string(), zod.object({
+  "name": zod.string(),
+  "price": zod.number(),
+  "features": zod.array(zod.string()),
+  "limits": zod.object({
+  "projects": zod.number(),
+  "tokens": zod.number(),
+  "deployments": zod.number()
+})
+}))
+
+
+/**
+ * @summary Upgrade subscription plan
+ */
+export const PostSubscriptionUpgradeBody = zod.object({
+  "plan": zod.enum(['pro', 'enterprise'])
+})
+
+export const PostSubscriptionUpgradeResponse = zod.object({
+  "success": zod.boolean(),
+  "subscription": zod.object({
+  "plan": zod.enum(['free', 'pro', 'enterprise']),
+  "status": zod.enum(['active', 'cancelled', 'expired']),
+  "billingCycle": zod.enum(['monthly', 'yearly']),
+  "currentPeriodEnd": zod.coerce.date(),
+  "usage": zod.object({
+  "aiTokensUsed": zod.number(),
+  "aiTokensLimit": zod.number(),
+  "projectsCount": zod.number(),
+  "projectsLimit": zod.number(),
+  "deploymentsThisMonth": zod.number(),
+  "deploymentsLimit": zod.number()
+}),
+  "features": zod.array(zod.string())
+}).optional(),
+  "checkoutUrl": zod.string().optional()
+})
+
+
+/**
+ * @summary List all website builder projects
+ */
+export const ListBuilderProjectsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "htmlContent": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "messageCount": zod.number(),
+  "snapshotCount": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListBuilderProjectsResponse = zod.array(ListBuilderProjectsResponseItem)
+
+
+/**
+ * @summary Create a new builder project
+ */
+export const CreateBuilderProjectBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().optional()
+})
+
+
+/**
+ * @summary Get a builder project with its files
+ */
+export const GetBuilderProjectParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetBuilderProjectResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "htmlContent": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "messages": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string(),
+  "model": zod.string().nullish(),
+  "tokensUsed": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "snapshots": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "label": zod.string(),
+  "htmlContent": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a builder project (name, files, preview)
+ */
+export const UpdateBuilderProjectParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateBuilderProjectBody = zod.object({
+  "name": zod.string().optional(),
+  "description": zod.string().optional(),
+  "htmlContent": zod.string().optional(),
+  "previewUrl": zod.string().optional()
+})
+
+export const UpdateBuilderProjectResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "htmlContent": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "messageCount": zod.number(),
+  "snapshotCount": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a builder project
+ */
+export const DeleteBuilderProjectParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+/**
+ * @summary Generate code via AI for a builder project
+ */
+export const GenerateBuilderCodeParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GenerateBuilderCodeBody = zod.object({
+  "prompt": zod.string(),
+  "taskType": zod.enum(['ui', 'logic', 'debug', 'general']).optional(),
+  "currentHtml": zod.string().optional(),
+  "conversationHistory": zod.array(zod.object({
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string()
+})).optional()
+})
+
+export const GenerateBuilderCodeResponse = zod.object({
+  "html": zod.string(),
+  "explanation": zod.string().optional(),
+  "model": zod.string(),
+  "tokensUsed": zod.number(),
+  "messageId": zod.string()
+})
+
+
+/**
+ * @summary List version snapshots for a project
+ */
+export const ListBuilderSnapshotsParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ListBuilderSnapshotsResponseItem = zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "label": zod.string(),
+  "htmlContent": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListBuilderSnapshotsResponse = zod.array(ListBuilderSnapshotsResponseItem)
+
+
+/**
+ * @summary Save a version snapshot
+ */
+export const CreateBuilderSnapshotParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CreateBuilderSnapshotBody = zod.object({
+  "label": zod.string(),
+  "htmlContent": zod.string()
+})
+
+
+/**
+ * @summary Restore project to a snapshot
+ */
+export const RestoreBuilderSnapshotParams = zod.object({
+  "id": zod.coerce.string(),
+  "snapshotId": zod.coerce.string()
+})
+
+export const RestoreBuilderSnapshotResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "htmlContent": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "messages": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string(),
+  "model": zod.string().nullish(),
+  "tokensUsed": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "snapshots": zod.array(zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "label": zod.string(),
+  "htmlContent": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get builder API settings and model config
+ */
+export const GetBuilderSettingsResponse = zod.object({
+  "openrouterKeyConfigured": zod.boolean(),
+  "openrouterKeyMasked": zod.string().nullish(),
+  "activeModel": zod.string(),
+  "fallbackModel": zod.string(),
+  "premiumModelsEnabled": zod.boolean(),
+  "freeModels": zod.array(zod.string()),
+  "premiumModels": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Update builder settings (model, API keys)
+ */
+export const UpdateBuilderSettingsBody = zod.object({
+  "openrouterApiKey": zod.string().optional(),
+  "activeModel": zod.string().optional(),
+  "premiumModelsEnabled": zod.boolean().optional()
+})
+
+export const UpdateBuilderSettingsResponse = zod.object({
+  "openrouterKeyConfigured": zod.boolean(),
+  "openrouterKeyMasked": zod.string().nullish(),
+  "activeModel": zod.string(),
+  "fallbackModel": zod.string(),
+  "premiumModelsEnabled": zod.boolean(),
+  "freeModels": zod.array(zod.string()),
+  "premiumModels": zod.array(zod.string())
+})
+
+

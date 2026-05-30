@@ -15,10 +15,12 @@ import notificationsRouter from "./notifications.js";
 import agentRouter from "./agent.js";
 import subscriptionRouter from "./subscription.js";
 import eventsRouter from "./events.js";
+import builderRouter from "./builder.js";
 
 const router: IRouter = Router();
 
 router.use(eventsRouter);
+router.use(builderRouter);
 router.use(healthRouter);
 router.use(projectsRouter);
 router.use(workflowsRouter);

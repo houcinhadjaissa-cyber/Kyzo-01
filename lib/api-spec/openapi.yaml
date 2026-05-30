@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: builder
+    description: Website builder projects, AI generation, and settings
   - name: projects
     description: AI-generated software projects
   - name: workflows
@@ -638,6 +640,218 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UpgradeResponse"
+
+  /builder/projects:
+    get:
+      operationId: listBuilderProjects
+      tags: [builder]
+      summary: List all website builder projects
+      responses:
+        "200":
+          description: List of builder projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BuilderProject"
+    post:
+      operationId: createBuilderProject
+      tags: [builder]
+      summary: Create a new builder project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuilderProjectInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderProject"
+
+  /builder/projects/{id}:
+    get:
+      operationId: getBuilderProject
+      tags: [builder]
+      summary: Get a builder project with its files
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Builder project with files
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderProjectDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateBuilderProject
+      tags: [builder]
+      summary: Update a builder project (name, files, preview)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuilderProjectUpdate"
+      responses:
+        "200":
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderProject"
+    delete:
+      operationId: deleteBuilderProject
+      tags: [builder]
+      summary: Delete a builder project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /builder/projects/{id}/generate:
+    post:
+      operationId: generateBuilderCode
+      tags: [builder]
+      summary: Generate code via AI for a builder project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuilderGenerateInput"
+      responses:
+        "200":
+          description: Generated code result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderGenerateResult"
+
+  /builder/projects/{id}/snapshots:
+    get:
+      operationId: listBuilderSnapshots
+      tags: [builder]
+      summary: List version snapshots for a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Snapshots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BuilderSnapshot"
+    post:
+      operationId: createBuilderSnapshot
+      tags: [builder]
+      summary: Save a version snapshot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuilderSnapshotInput"
+      responses:
+        "201":
+          description: Snapshot created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderSnapshot"
+
+  /builder/projects/{id}/snapshots/{snapshotId}/restore:
+    post:
+      operationId: restoreBuilderSnapshot
+      tags: [builder]
+      summary: Restore project to a snapshot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: snapshotId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Restored project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderProjectDetail"
+
+  /builder/settings:
+    get:
+      operationId: getBuilderSettings
+      tags: [builder]
+      summary: Get builder API settings and model config
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderSettings"
+    patch:
+      operationId: updateBuilderSettings
+      tags: [builder]
+      summary: Update builder settings (model, API keys)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuilderSettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderSettings"
 
 components:
   schemas:
@@ -1532,3 +1746,233 @@ components:
           type: string
       required:
         - success
+
+    BuilderProject:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        htmlContent:
+          type: ["string", "null"]
+        previewUrl:
+          type: ["string", "null"]
+        messageCount:
+          type: integer
+        snapshotCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - messageCount
+        - snapshotCount
+        - createdAt
+        - updatedAt
+
+    BuilderProjectDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        htmlContent:
+          type: ["string", "null"]
+        previewUrl:
+          type: ["string", "null"]
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/BuilderMessage"
+        snapshots:
+          type: array
+          items:
+            $ref: "#/components/schemas/BuilderSnapshot"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - messages
+        - snapshots
+        - createdAt
+        - updatedAt
+
+    BuilderProjectInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+      required:
+        - name
+
+    BuilderProjectUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        htmlContent:
+          type: string
+        previewUrl:
+          type: string
+
+    BuilderMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        model:
+          type: ["string", "null"]
+        tokensUsed:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - role
+        - content
+        - createdAt
+
+    BuilderGenerateInput:
+      type: object
+      properties:
+        prompt:
+          type: string
+        taskType:
+          type: string
+          enum: [ui, logic, debug, general]
+        currentHtml:
+          type: string
+        conversationHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+                enum: [user, assistant]
+              content:
+                type: string
+            required:
+              - role
+              - content
+      required:
+        - prompt
+
+    BuilderGenerateResult:
+      type: object
+      properties:
+        html:
+          type: string
+        explanation:
+          type: string
+        model:
+          type: string
+        tokensUsed:
+          type: integer
+        messageId:
+          type: string
+      required:
+        - html
+        - model
+        - tokensUsed
+        - messageId
+
+    BuilderSnapshot:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        label:
+          type: string
+        htmlContent:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - label
+        - htmlContent
+        - createdAt
+
+    BuilderSnapshotInput:
+      type: object
+      properties:
+        label:
+          type: string
+        htmlContent:
+          type: string
+      required:
+        - label
+        - htmlContent
+
+    BuilderSettings:
+      type: object
+      properties:
+        openrouterKeyConfigured:
+          type: boolean
+        openrouterKeyMasked:
+          type: ["string", "null"]
+        activeModel:
+          type: string
+        fallbackModel:
+          type: string
+        premiumModelsEnabled:
+          type: boolean
+        freeModels:
+          type: array
+          items:
+            type: string
+        premiumModels:
+          type: array
+          items:
+            type: string
+      required:
+        - openrouterKeyConfigured
+        - activeModel
+        - fallbackModel
+        - premiumModelsEnabled
+        - freeModels
+        - premiumModels
+
+    BuilderSettingsUpdate:
+      type: object
+      properties:
+        openrouterApiKey:
+          type: string
+        activeModel:
+          type: string
+        premiumModelsEnabled:
+          type: boolean

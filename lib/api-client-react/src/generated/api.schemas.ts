@@ -458,12 +458,8 @@ export interface UsageSummary {
   byProject: UsageSummaryByProjectItem[];
 }
 
-export type ListActivityParams = {
-limit?: number;
-};
-
-
 export type NotificationType = typeof NotificationType[keyof typeof NotificationType];
+
 
 export const NotificationType = {
   generation_complete: 'generation_complete',
@@ -497,27 +493,78 @@ export interface SuccessResponse {
   success: boolean;
 }
 
+export type PushTokenRequestPlatform = typeof PushTokenRequestPlatform[keyof typeof PushTokenRequestPlatform];
+
+
+export const PushTokenRequestPlatform = {
+  ios: 'ios',
+  android: 'android',
+  web: 'web',
+} as const;
+
 export interface PushTokenRequest {
   token: string;
-  platform: 'ios' | 'android' | 'web';
+  platform: PushTokenRequestPlatform;
 }
 
-export type AgentMode = 'active' | 'paused';
-export type AgentHealth = 'nominal' | 'degraded' | 'error';
+export type AgentStatusMode = typeof AgentStatusMode[keyof typeof AgentStatusMode];
+
+
+export const AgentStatusMode = {
+  active: 'active',
+  paused: 'paused',
+} as const;
+
+export type AgentStatusHealth = typeof AgentStatusHealth[keyof typeof AgentStatusHealth];
+
+
+export const AgentStatusHealth = {
+  nominal: 'nominal',
+  degraded: 'degraded',
+  error: 'error',
+} as const;
 
 export interface AgentStatus {
-  mode: AgentMode;
+  mode: AgentStatusMode;
   isScanning: boolean;
   lastScanAt: string;
   totalFixesApplied: number;
   totalIssuesDetected: number;
   uptime: number;
-  health: AgentHealth;
+  health: AgentStatusHealth;
 }
 
-export type AgentFixSeverity = 'critical' | 'high' | 'medium' | 'low';
-export type AgentFixCategory = 'security' | 'performance' | 'type_error' | 'config' | 'dependency';
-export type AgentFixStatus = 'detected' | 'researching' | 'applied' | 'verified' | 'failed';
+export type AgentFixSeverity = typeof AgentFixSeverity[keyof typeof AgentFixSeverity];
+
+
+export const AgentFixSeverity = {
+  critical: 'critical',
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export type AgentFixCategory = typeof AgentFixCategory[keyof typeof AgentFixCategory];
+
+
+export const AgentFixCategory = {
+  security: 'security',
+  performance: 'performance',
+  type_error: 'type_error',
+  config: 'config',
+  dependency: 'dependency',
+} as const;
+
+export type AgentFixStatus = typeof AgentFixStatus[keyof typeof AgentFixStatus];
+
+
+export const AgentFixStatus = {
+  detected: 'detected',
+  researching: 'researching',
+  applied: 'applied',
+  verified: 'verified',
+  failed: 'failed',
+} as const;
 
 export interface AgentFix {
   id: string;
@@ -540,36 +587,73 @@ export interface ScanJob {
   startedAt: string;
 }
 
-export type SubscriptionPlan = 'free' | 'pro' | 'enterprise';
-export type SubscriptionStatus = 'active' | 'cancelled' | 'expired';
+export type SubscriptionPlan = typeof SubscriptionPlan[keyof typeof SubscriptionPlan];
 
-export interface SubscriptionUsage {
+
+export const SubscriptionPlan = {
+  free: 'free',
+  pro: 'pro',
+  enterprise: 'enterprise',
+} as const;
+
+export type SubscriptionStatus = typeof SubscriptionStatus[keyof typeof SubscriptionStatus];
+
+
+export const SubscriptionStatus = {
+  active: 'active',
+  cancelled: 'cancelled',
+  expired: 'expired',
+} as const;
+
+export type SubscriptionBillingCycle = typeof SubscriptionBillingCycle[keyof typeof SubscriptionBillingCycle];
+
+
+export const SubscriptionBillingCycle = {
+  monthly: 'monthly',
+  yearly: 'yearly',
+} as const;
+
+export type SubscriptionUsage = {
   aiTokensUsed: number;
   aiTokensLimit: number;
   projectsCount: number;
   projectsLimit: number;
   deploymentsThisMonth: number;
   deploymentsLimit: number;
-}
+};
 
 export interface Subscription {
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
-  billingCycle: 'monthly' | 'yearly';
+  billingCycle: SubscriptionBillingCycle;
   currentPeriodEnd: string;
   usage: SubscriptionUsage;
   features: string[];
 }
 
+export type PlanLimits = {
+  projects: number;
+  tokens: number;
+  deployments: number;
+};
+
 export interface Plan {
   name: string;
   price: number;
   features: string[];
-  limits: { projects: number; tokens: number; deployments: number };
+  limits: PlanLimits;
 }
 
+export type UpgradeRequestPlan = typeof UpgradeRequestPlan[keyof typeof UpgradeRequestPlan];
+
+
+export const UpgradeRequestPlan = {
+  pro: 'pro',
+  enterprise: 'enterprise',
+} as const;
+
 export interface UpgradeRequest {
-  plan: 'pro' | 'enterprise';
+  plan: UpgradeRequestPlan;
 }
 
 export interface UpgradeResponse {
@@ -578,11 +662,148 @@ export interface UpgradeResponse {
   checkoutUrl?: string;
 }
 
-export interface GetNotificationsParams {
-  unreadOnly?: string;
+export interface BuilderProject {
+  id: string;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  htmlContent?: string | null;
+  /** @nullable */
+  previewUrl?: string | null;
+  messageCount: number;
+  snapshotCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface GetAgentFixesParams {
-  status?: string;
-  limit?: number;
+export type BuilderMessageRole = typeof BuilderMessageRole[keyof typeof BuilderMessageRole];
+
+
+export const BuilderMessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export interface BuilderMessage {
+  id: string;
+  projectId: string;
+  role: BuilderMessageRole;
+  content: string;
+  /** @nullable */
+  model?: string | null;
+  /** @nullable */
+  tokensUsed?: number | null;
+  createdAt: string;
 }
+
+export interface BuilderSnapshot {
+  id: string;
+  projectId: string;
+  label: string;
+  htmlContent: string;
+  createdAt: string;
+}
+
+export interface BuilderProjectDetail {
+  id: string;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  htmlContent?: string | null;
+  /** @nullable */
+  previewUrl?: string | null;
+  messages: BuilderMessage[];
+  snapshots: BuilderSnapshot[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BuilderProjectInput {
+  name: string;
+  description?: string;
+}
+
+export interface BuilderProjectUpdate {
+  name?: string;
+  description?: string;
+  htmlContent?: string;
+  previewUrl?: string;
+}
+
+export type BuilderGenerateInputTaskType = typeof BuilderGenerateInputTaskType[keyof typeof BuilderGenerateInputTaskType];
+
+
+export const BuilderGenerateInputTaskType = {
+  ui: 'ui',
+  logic: 'logic',
+  debug: 'debug',
+  general: 'general',
+} as const;
+
+export type BuilderGenerateInputConversationHistoryItemRole = typeof BuilderGenerateInputConversationHistoryItemRole[keyof typeof BuilderGenerateInputConversationHistoryItemRole];
+
+
+export const BuilderGenerateInputConversationHistoryItemRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export type BuilderGenerateInputConversationHistoryItem = {
+  role: BuilderGenerateInputConversationHistoryItemRole;
+  content: string;
+};
+
+export interface BuilderGenerateInput {
+  prompt: string;
+  taskType?: BuilderGenerateInputTaskType;
+  currentHtml?: string;
+  conversationHistory?: BuilderGenerateInputConversationHistoryItem[];
+}
+
+export interface BuilderGenerateResult {
+  html: string;
+  explanation?: string;
+  model: string;
+  tokensUsed: number;
+  messageId: string;
+}
+
+export interface BuilderSnapshotInput {
+  label: string;
+  htmlContent: string;
+}
+
+export interface BuilderSettings {
+  openrouterKeyConfigured: boolean;
+  /** @nullable */
+  openrouterKeyMasked?: string | null;
+  activeModel: string;
+  fallbackModel: string;
+  premiumModelsEnabled: boolean;
+  freeModels: string[];
+  premiumModels: string[];
+}
+
+export interface BuilderSettingsUpdate {
+  openrouterApiKey?: string;
+  activeModel?: string;
+  premiumModelsEnabled?: boolean;
+}
+
+export type ListActivityParams = {
+limit?: number;
+};
+
+export type GetNotificationsParams = {
+unreadOnly?: string;
+};
+
+export type GetAgentFixesParams = {
+status?: string;
+limit?: number;
+};
+
+export type GetSubscriptionPlans200 = {[key: string]: Plan};
+

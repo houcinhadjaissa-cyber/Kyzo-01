@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/builder/"
+title = "AIOS Website Builder"
+version = "1.0.0"
+id = "artifacts/builder"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/builder/" ]
+localPort = 23127
+
+[services.development]
+run = "pnpm --filter @workspace/builder run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/builder", "run", "build" ]
+publicDir = "artifacts/builder/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23127"
+BASE_PATH = "/builder/"
