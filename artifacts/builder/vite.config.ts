@@ -51,7 +51,17 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "src"),
       "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
     },
-    dedupe: ["react", "react-dom"],
+    dedupe: [
+      "react",
+      "react-dom",
+      "@codemirror/state",
+      "@codemirror/view",
+      "@codemirror/basic-setup",
+      "@codemirror/lang-html",
+      "@codemirror/lang-javascript",
+      "@codemirror/lang-css",
+      "@codemirror/theme-one-dark",
+    ],
   },
   root: path.resolve(import.meta.dirname),
   build: {

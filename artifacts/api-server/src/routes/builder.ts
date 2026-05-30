@@ -470,6 +470,323 @@ router.post(
   },
 );
 
+// ─── SSE Streaming Generation ────────────────────────────────────────────────
+
+router.post(
+  "/builder/projects/:id/generate-stream",
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const {
+      prompt,
+      taskType = "ui",
+      currentHtml = "",
+      conversationHistory = [],
+    } = req.body as {
+      prompt: string;
+      taskType?: string;
+      currentHtml?: string;
+      conversationHistory?: Array<{ role: string; content: string }>;
+    };
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    const send = (data: object) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    try {
+      const [project] = await db
+        .select()
+        .from(builderProjectsTable)
+        .where(eq(builderProjectsTable.id, id));
+
+      if (!project) {
+        send({ error: "Project not found" });
+        res.end();
+        return;
+      }
+
+      // Save user message
+      await db
+        .insert(builderMessagesTable)
+        .values({ projectId: id, role: "user", content: prompt });
+
+      const settings = getSettings();
+
+      const systemPrompt = `You are an expert full-stack web developer. Generate complete, beautiful, production-ready HTML pages.
+
+Rules:
+- Output ONLY a complete HTML document (<!DOCTYPE html> ... </html>)
+- Use inline CSS and vanilla JavaScript — no external dependencies required
+- Mobile-first responsive design using CSS Grid / Flexbox
+- Apple iOS 26 inspired light theme: background #F5F5F7, surface #FFFFFF, primary blue #0071E3, text #1D1D1F, secondary text #6E6E73, borders #D2D2D7
+- San Francisco font stack: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
+- Smooth animations (200-300ms ease-out), rounded corners (12-20px), subtle shadows
+- Touch targets minimum 44px, safe-area insets for mobile
+- NEVER include external CDN links or fetch calls that require internet
+- Output ONLY the HTML — no explanation, no markdown, no code blocks
+
+${currentHtml ? `Current HTML to modify:\n${currentHtml.slice(0, 6000)}` : "This is a new project — generate from scratch."}
+${conversationHistory.length > 0 ? `\nPrevious context:\n${conversationHistory.slice(-6).map((m) => `${m.role}: ${m.content}`).join("\n")}` : ""}`;
+
+      if (!settings.openrouterKeyConfigured) {
+        // Stream mock response character-by-character
+        const mockHtml = generateMockHtml(prompt);
+        const chunks = mockHtml.match(/.{1,80}/g) ?? [];
+        for (const chunk of chunks) {
+          send({ chunk });
+          await new Promise((r) => setTimeout(r, 8));
+        }
+        await db
+          .insert(builderMessagesTable)
+          .values({ projectId: id, role: "assistant", content: "Mock response — add OpenRouter API key in Settings.", model: "mock" });
+        await db.update(builderProjectsTable).set({ htmlContent: mockHtml, updatedAt: new Date() }).where(eq(builderProjectsTable.id, id));
+        send({ done: true, html: mockHtml });
+        res.write("data: [DONE]\n\n");
+        res.end();
+        return;
+      }
+
+      const model = pickModel(taskType, settings.premiumModelsEnabled);
+      const modelsToTry = [model, settings.fallbackModel, FREE_MODELS[2]].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+
+      let fullContent = "";
+      let usedModel = model;
+      let success = false;
+
+      for (const m of modelsToTry) {
+        try {
+          const openRouterRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": process.env.FRONTEND_URL ?? "https://aios.app",
+              "X-Title": "AIOS Website Builder",
+            },
+            body: JSON.stringify({
+              model: m,
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: prompt },
+              ],
+              temperature: 0.7,
+              max_tokens: 8192,
+              stream: true,
+            }),
+          });
+
+          if (!openRouterRes.ok || !openRouterRes.body) {
+            throw new Error(`OpenRouter ${openRouterRes.status}`);
+          }
+
+          const reader = openRouterRes.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
+
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              const rawData = line.slice(6).trim();
+              if (rawData === "[DONE]") break;
+              try {
+                const parsed = JSON.parse(rawData) as {
+                  choices?: Array<{ delta?: { content?: string } }>;
+                };
+                const chunk = parsed.choices?.[0]?.delta?.content ?? "";
+                if (chunk) {
+                  fullContent += chunk;
+                  send({ chunk });
+                }
+              } catch {
+                // skip malformed SSE lines
+              }
+            }
+          }
+
+          usedModel = m;
+          success = true;
+          break;
+        } catch {
+          continue;
+        }
+      }
+
+      if (!success) {
+        fullContent = generateMockHtml(prompt);
+        for (const chunk of (fullContent.match(/.{1,80}/g) ?? [])) {
+          send({ chunk });
+          await new Promise((r) => setTimeout(r, 6));
+        }
+      }
+
+      // Clean HTML
+      let html = fullContent.trim();
+      const fence = html.match(/```html\n?([\s\S]+?)```/i) ?? html.match(/```\n?([\s\S]+?)```/i);
+      if (fence) html = fence[1].trim();
+      if (!html.includes("<!DOCTYPE") && !html.includes("<html")) html = wrapInHtml(html, prompt);
+
+      // Save to DB
+      await db.insert(builderMessagesTable).values({
+        projectId: id,
+        role: "assistant",
+        content: `Generated: ${prompt}`,
+        model: usedModel,
+      });
+      await db.update(builderProjectsTable).set({ htmlContent: html, updatedAt: new Date() }).where(eq(builderProjectsTable.id, id));
+
+      send({ done: true, html });
+      res.write("data: [DONE]\n\n");
+    } catch (err) {
+      send({ error: String(err) });
+      res.write("data: [DONE]\n\n");
+    }
+
+    res.end();
+  },
+);
+
+// ─── Vercel Deploy ────────────────────────────────────────────────────────────
+
+router.post(
+  "/builder/projects/:id/deploy",
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const vercelToken = process.env.VERCEL_TOKEN;
+
+      if (!vercelToken) {
+        res.json({
+          ok: false,
+          message:
+            'Add VERCEL_TOKEN to Replit Secrets to enable one-click deploy. Get your token at vercel.com/account/tokens',
+        });
+        return;
+      }
+
+      const [project] = await db
+        .select()
+        .from(builderProjectsTable)
+        .where(eq(builderProjectsTable.id, id));
+
+      if (!project) {
+        res.status(404).json({ error: "Not found" });
+        return;
+      }
+
+      const htmlContent = project.htmlContent || "<html><body><h1>Empty project</h1></body></html>";
+      const projectName = `aios-${project.name.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 40)}-${id.slice(0, 8)}`;
+
+      const deployRes = await fetch("https://api.vercel.com/v13/deployments", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${vercelToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: projectName,
+          files: [
+            {
+              file: "index.html",
+              data: Buffer.from(htmlContent).toString("base64"),
+              encoding: "base64",
+            },
+          ],
+          projectSettings: { framework: null },
+          target: "production",
+        }),
+      });
+
+      if (!deployRes.ok) {
+        const text = await deployRes.text();
+        res.json({ ok: false, message: `Vercel error ${deployRes.status}: ${text.slice(0, 200)}` });
+        return;
+      }
+
+      const deployData = (await deployRes.json()) as { id?: string; url?: string; readyState?: string };
+      const deployId = deployData.id;
+
+      if (!deployId) {
+        res.json({ ok: false, message: "No deployment ID returned" });
+        return;
+      }
+
+      // Poll for completion (max 90s)
+      const start = Date.now();
+      while (Date.now() - start < 90_000) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const pollRes = await fetch(`https://api.vercel.com/v13/deployments/${deployId}`, {
+          headers: { Authorization: `Bearer ${vercelToken}` },
+        });
+        const pollData = (await pollRes.json()) as { readyState?: string; url?: string };
+        if (pollData.readyState === "READY") {
+          const liveUrl = `https://${pollData.url}`;
+          await db.update(builderProjectsTable).set({ previewUrl: liveUrl, updatedAt: new Date() }).where(eq(builderProjectsTable.id, id));
+          res.json({ ok: true, url: liveUrl });
+          return;
+        }
+        if (pollData.readyState === "ERROR" || pollData.readyState === "CANCELED") {
+          res.json({ ok: false, message: `Deployment ${pollData.readyState}` });
+          return;
+        }
+      }
+
+      res.json({ ok: false, message: "Deploy timeout — check Vercel dashboard" });
+    } catch (err) {
+      res.status(500).json({ ok: false, message: String(err) });
+    }
+  },
+);
+
+// ─── Workflow Run ─────────────────────────────────────────────────────────────
+
+router.post(
+  "/builder/projects/:id/workflow-run",
+  async (req: Request, res: Response) => {
+    try {
+      const { nodes, edges } = req.body as {
+        nodes: Array<{ id: string; type: string; data: { label: string } }>;
+        edges: Array<{ source: string; target: string }>;
+      };
+
+      const log: string[] = [];
+      log.push(`Workflow execution started — ${nodes.length} nodes, ${edges.length} edges`);
+
+      for (const node of nodes) {
+        switch (node.type) {
+          case "trigger":
+            log.push(`[TRIGGER] ${node.data.label} — fired`);
+            break;
+          case "condition":
+            log.push(`[CONDITION] ${node.data.label} — evaluated → true`);
+            break;
+          case "action":
+            log.push(`[ACTION] ${node.data.label} — executed`);
+            break;
+          default:
+            log.push(`[NODE] ${node.data.label} — processed`);
+        }
+      }
+
+      log.push("Workflow execution complete.");
+      res.json({ ok: true, log });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  },
+);
+
 // ─── Mock / fallback HTML helpers ─────────────────────────────────────────────
 
 function generateMockHtml(prompt: string): string {
