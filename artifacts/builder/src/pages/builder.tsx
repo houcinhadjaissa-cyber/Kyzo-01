@@ -260,6 +260,8 @@ export default function Builder() {
   const [deployStatus, setDeployStatus] = useState<DeployStatus>("idle");
   const [deployUrl, setDeployUrl] = useState<string | undefined>();
   const [deployMessage, setDeployMessage] = useState<string | undefined>();
+  // E-commerce module enabled states — persisted to project.description JSON
+  const [ecomModules, setEcomModules] = useState<Record<string, boolean>>({});
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
@@ -272,6 +274,13 @@ export default function Builder() {
       );
       if (!localHtml && project.htmlContent) {
         setLocalHtml(project.htmlContent);
+      }
+      // Hydrate e-commerce module states from persisted description JSON
+      try {
+        const meta = JSON.parse(project.description ?? "{}") as { _ecom?: Record<string, boolean> };
+        if (meta._ecom) setEcomModules(meta._ecom);
+      } catch {
+        // plain-text description — no module config
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -297,8 +306,7 @@ export default function Builder() {
     setStreamingHtml("");
     setMobileTab("preview");
 
-    const userMsg = { role: "user", content: text };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, { role: "user", content: text }]);
 
     try {
       const response = await fetch(`/api/builder/projects/${id}/generate-stream`, {
@@ -317,6 +325,8 @@ export default function Builder() {
       const decoder = new TextDecoder();
       let accumulated = "";
       let buf = "";
+      // Track SSE named-event type for current event block
+      let currentEvent = "message";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -326,41 +336,88 @@ export default function Builder() {
         buf = lines.pop() ?? "";
 
         for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(data) as { chunk?: string; html?: string; done?: boolean; error?: string };
-            if (parsed.error) {
-              setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${parsed.error}` }]);
-              setIsStreaming(false);
-              return;
-            }
-            if (parsed.chunk) {
-              accumulated += parsed.chunk;
-              setStreamingHtml(accumulated);
-            }
-            if (parsed.done && parsed.html) {
-              accumulated = parsed.html;
-              setStreamingHtml(accumulated);
-            }
-          } catch {
-            // ignore parse errors
+          if (line === "") {
+            // blank line resets event name after each event block
+            currentEvent = "message";
+            continue;
           }
+          if (line.startsWith("event: ")) {
+            currentEvent = line.slice(7).trim();
+            continue;
+          }
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6);
+
+          if (data === "[DONE]") {
+            // Stream fully terminated — ensure streaming state is cleared
+            setIsStreaming(false);
+            setStreamingHtml("");
+            return;
+          }
+
+          if (currentEvent === "done") {
+            // Final cleaned HTML from server
+            try {
+              const parsed = JSON.parse(data) as { html: string };
+              setLocalHtml(parsed.html);
+              setStreamingHtml("");
+              setIsStreaming(false);
+              setMessages((prev) => [...prev, { role: "assistant", content: `Generated: ${text}` }]);
+              queryClient.invalidateQueries({ queryKey: getGetBuilderProjectQueryKey(id) });
+            } catch {
+              // fallback: use accumulated
+              setLocalHtml(accumulated);
+            }
+            return;
+          }
+
+          if (currentEvent === "error") {
+            try {
+              const parsed = JSON.parse(data) as { error: string };
+              setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${parsed.error}` }]);
+            } catch {
+              setMessages((prev) => [...prev, { role: "assistant", content: `Generation error` }]);
+            }
+            setIsStreaming(false);
+            setStreamingHtml("");
+            return;
+          }
+
+          // Default event = raw token (newlines were encoded as \n literal)
+          const token = data.replace(/\\n/g, "\n");
+          accumulated += token;
+          setStreamingHtml(accumulated);
         }
       }
 
-      setLocalHtml(accumulated);
-      setStreamingHtml("");
+      // If stream ended without [DONE] / event:done (connection drop etc.)
+      if (accumulated) {
+        setLocalHtml(accumulated);
+        setStreamingHtml("");
+      }
       setIsStreaming(false);
-      setMessages((prev) => [...prev, { role: "assistant", content: `Generated: ${text}` }]);
-      updateProject.mutate({ id, data: { htmlContent: accumulated } });
-      queryClient.invalidateQueries({ queryKey: getGetBuilderProjectQueryKey(id) });
     } catch (err) {
       setIsStreaming(false);
+      setStreamingHtml("");
       setMessages((prev) => [...prev, { role: "assistant", content: `Failed: ${String(err)}` }]);
     }
-  }, [prompt, id, isStreaming, localHtml, messages, updateProject, queryClient]);
+  }, [prompt, id, isStreaming, localHtml, messages, queryClient]);
+
+  // ── Persist e-commerce module toggle to project description JSON ─────────────
+  const handleEcomToggle = useCallback((moduleId: string, enabled: boolean) => {
+    if (!id) return;
+    const next = { ...ecomModules, [moduleId]: enabled };
+    setEcomModules(next);
+    // Merge into project.description JSON (preserves existing _text)
+    let descMeta: Record<string, unknown> = {};
+    try {
+      descMeta = JSON.parse(project?.description ?? "{}") as Record<string, unknown>;
+    } catch {
+      descMeta = { _text: project?.description ?? "" };
+    }
+    const updated = JSON.stringify({ ...descMeta, _ecom: next });
+    updateProject.mutate({ id, data: { description: updated } });
+  }, [id, ecomModules, project?.description, updateProject]);
 
   // ── Snapshot ──────────────────────────────────────────────────────────────────
 
@@ -882,7 +939,9 @@ export default function Builder() {
         <EcommercePanel
           projectId={id ?? ""}
           currentHtml={localHtml}
+          initialEnabled={ecomModules}
           onInsert={(p) => handleSend(p)}
+          onToggle={handleEcomToggle}
           onClose={() => setShowEcommerce(false)}
         />
       )}

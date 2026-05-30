@@ -77,14 +77,16 @@ const MODULES: Module[] = [
 interface EcommercePanelProps {
   projectId: string;
   currentHtml: string;
+  initialEnabled?: Record<string, boolean>;
   onInsert: (prompt: string) => void;
+  onToggle?: (moduleId: string, enabled: boolean) => void;
   onClose: () => void;
 }
 
-export default function EcommercePanel({ projectId, currentHtml, onInsert, onClose }: EcommercePanelProps) {
-  const [enabled, setEnabled] = useState<Record<string, boolean>>({});
+export default function EcommercePanel({ projectId: _projectId, currentHtml: _currentHtml, initialEnabled = {}, onInsert, onToggle, onClose }: EcommercePanelProps) {
+  const [enabled, setEnabled] = useState<Record<string, boolean>>(initialEnabled);
   const [inserting, setInserting] = useState<string | null>(null);
-  const [inserted, setInserted] = useState<Record<string, boolean>>({});
+  const [inserted, setInserted] = useState<Record<string, boolean>>({})
 
   const handleInsert = async (mod: Module) => {
     setInserting(mod.id);
@@ -130,7 +132,10 @@ export default function EcommercePanel({ projectId, currentHtml, onInsert, onClo
                 </div>
                 <Switch
                   checked={!!enabled[mod.id]}
-                  onCheckedChange={(checked) => setEnabled((prev) => ({ ...prev, [mod.id]: checked }))}
+                  onCheckedChange={(checked) => {
+                    setEnabled((prev) => ({ ...prev, [mod.id]: checked }));
+                    onToggle?.(mod.id, checked);
+                  }}
                 />
               </div>
               <Button

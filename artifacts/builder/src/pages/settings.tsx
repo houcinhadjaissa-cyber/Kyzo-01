@@ -1,7 +1,15 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, Key, Zap, Check, AlertCircle, Rocket, TestTube2, Loader2 } from "lucide-react";
-import { useGetBuilderSettings, useUpdateBuilderSettings, getGetBuilderSettingsQueryKey } from "@workspace/api-client-react";
+import { useGetBuilderSettings, useUpdateBuilderSettings, getGetBuilderSettingsQueryKey, type BuilderSettings } from "@workspace/api-client-react";
+
+// Extended settings type to include Vercel deploy config returned by the server
+type ExtendedBuilderSettings = BuilderSettings & {
+  vercelTokenConfigured?: boolean;
+  vercelTokenMasked?: string | null;
+  vercelTeamSlug?: string;
+  vercelProjectName?: string;
+};
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -16,11 +24,14 @@ import { Badge } from "@/components/ui/badge";
 
 export default function Settings() {
   const queryClient = useQueryClient();
-  const { data: settings, isLoading } = useGetBuilderSettings();
+  const { data: rawSettings, isLoading } = useGetBuilderSettings();
+  const settings = rawSettings as ExtendedBuilderSettings | undefined;
   const updateSettings = useUpdateBuilderSettings();
 
   const [apiKey, setApiKey] = useState("");
-  const [vercelToken, setVercelToken] = useState("");
+  const [vercelTokenInput, setVercelTokenInput] = useState("");
+  const [vercelTeamSlugInput, setVercelTeamSlugInput] = useState("");
+  const [vercelProjectNameInput, setVercelProjectNameInput] = useState("");
   const [activeModel, setActiveModel] = useState<string>("");
   const [premiumEnabled, setPremiumEnabled] = useState(false);
   const [testStatus, setTestStatus] = useState<"idle" | "testing" | "ok" | "error">("idle");
@@ -38,6 +49,23 @@ export default function Settings() {
     updateSettings.mutate({ data: { openrouterApiKey: apiKey } }, {
       onSuccess: () => {
         setApiKey("");
+        queryClient.invalidateQueries({ queryKey: getGetBuilderSettingsQueryKey() });
+      },
+    });
+  };
+
+  const handleSaveVercel = () => {
+    if (!vercelTokenInput) return;
+    // Cast to `unknown` first since the generated type doesn't include Vercel fields yet
+    updateSettings.mutate({
+      data: {
+        vercelToken: vercelTokenInput,
+        vercelTeamSlug: vercelTeamSlugInput,
+        vercelProjectName: vercelProjectNameInput,
+      } as unknown as Parameters<typeof updateSettings.mutate>[0]["data"],
+    }, {
+      onSuccess: () => {
+        setVercelTokenInput("");
         queryClient.invalidateQueries({ queryKey: getGetBuilderSettingsQueryKey() });
       },
     });
@@ -210,21 +238,60 @@ export default function Settings() {
               One-Click Deploy
             </CardTitle>
             <CardDescription className="text-sm">
-              Deploy generated websites directly to Vercel. Add your token in{" "}
-              <a href="https://vercel.com/account/tokens" target="_blank" rel="noreferrer" className="text-primary hover:underline">Vercel Account → Tokens</a>, then save it as{" "}
-              <code className="bg-muted px-1 rounded text-xs">VERCEL_TOKEN</code> in Replit Secrets.
+              Deploy generated websites directly to Vercel as static sites. Get a token at{" "}
+              <a href="https://vercel.com/account/tokens" target="_blank" rel="noreferrer" className="text-primary hover:underline">vercel.com/account/tokens</a>.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-lg bg-muted/60 p-4 text-sm space-y-2">
-              <p className="font-medium text-sm">How to enable deploy:</p>
-              <ol className="list-decimal list-inside space-y-1 text-muted-foreground text-xs">
-                <li>Go to <a href="https://vercel.com/account/tokens" target="_blank" rel="noreferrer" className="text-primary hover:underline">vercel.com/account/tokens</a></li>
-                <li>Create a new token with "Full Account" scope</li>
-                <li>In Replit, open the Secrets tool (🔒) and add <code className="bg-background px-1 rounded">VERCEL_TOKEN</code></li>
-                <li>Restart the API Server workflow</li>
-                <li>The "Deploy" button in the builder will now work</li>
-              </ol>
+            {settings?.vercelTokenConfigured && (
+              <div className="flex items-center gap-2 text-sm text-green-700 bg-green-500/10 p-3 rounded-lg border border-green-500/20">
+                <Check className="h-4 w-4 shrink-0" />
+                <span>Token configured: {settings.vercelTokenMasked}</span>
+              </div>
+            )}
+            <div className="grid gap-2">
+              <Label htmlFor="vercelToken">{settings?.vercelTokenConfigured ? "Update Vercel Token" : "Vercel Token"}</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="vercelToken"
+                  type="password"
+                  placeholder="vercel_token_…"
+                  value={vercelTokenInput}
+                  onChange={(e) => setVercelTokenInput(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleSaveVercel}
+                  disabled={!vercelTokenInput || updateSettings.isPending}
+                  className="shrink-0"
+                >
+                  {updateSettings.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                </Button>
+              </div>
+            </div>
+            <Separator />
+            <div className="grid gap-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Optional — Deploy Config</p>
+              <div className="grid gap-2">
+                <Label htmlFor="vercelTeam" className="text-sm">Team Slug</Label>
+                <Input
+                  id="vercelTeam"
+                  placeholder="my-team (leave blank for personal account)"
+                  value={vercelTeamSlugInput || settings?.vercelTeamSlug || ""}
+                  onChange={(e) => setVercelTeamSlugInput(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">The Vercel team slug to deploy under. Leave blank to deploy to your personal account.</p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="vercelProject" className="text-sm">Default Project Name</Label>
+                <Input
+                  id="vercelProject"
+                  placeholder="my-aios-project (auto-generated if blank)"
+                  value={vercelProjectNameInput || settings?.vercelProjectName || ""}
+                  onChange={(e) => setVercelProjectNameInput(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Override the auto-generated Vercel project name for all deployments.</p>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -86,6 +86,8 @@ function getSettings() {
   const active = process.env.BUILDER_ACTIVE_MODEL ?? FREE_MODELS[0];
   const fallback = FREE_MODELS[1];
   const premium = process.env.BUILDER_PREMIUM_ENABLED === "true";
+  const vercelToken = process.env.VERCEL_TOKEN ?? "";
+  const vercelTokenMasked = vercelToken ? `${"*".repeat(16)}${vercelToken.slice(-4)}` : null;
   return {
     openrouterKeyConfigured: Boolean(key),
     openrouterKeyMasked: masked,
@@ -94,6 +96,10 @@ function getSettings() {
     premiumModelsEnabled: premium,
     freeModels: FREE_MODELS,
     premiumModels: PREMIUM_MODELS,
+    vercelTokenConfigured: Boolean(vercelToken),
+    vercelTokenMasked,
+    vercelTeamSlug: process.env.VERCEL_TEAM_SLUG ?? "",
+    vercelProjectName: process.env.VERCEL_PROJECT_NAME ?? "",
   };
 }
 
@@ -104,14 +110,21 @@ router.get("/builder/settings", (_req: Request, res: Response) => {
 });
 
 router.patch("/builder/settings", (req: Request, res: Response) => {
-  const { activeModel, premiumModelsEnabled } = req.body as {
+  const { openrouterApiKey, activeModel, premiumModelsEnabled, vercelToken, vercelTeamSlug, vercelProjectName } = req.body as {
     openrouterApiKey?: string;
     activeModel?: string;
     premiumModelsEnabled?: boolean;
+    vercelToken?: string;
+    vercelTeamSlug?: string;
+    vercelProjectName?: string;
   };
+  if (openrouterApiKey) process.env.OPENROUTER_API_KEY = openrouterApiKey;
   if (activeModel) process.env.BUILDER_ACTIVE_MODEL = activeModel;
   if (premiumModelsEnabled !== undefined)
     process.env.BUILDER_PREMIUM_ENABLED = String(premiumModelsEnabled);
+  if (vercelToken) process.env.VERCEL_TOKEN = vercelToken;
+  if (vercelTeamSlug !== undefined) process.env.VERCEL_TEAM_SLUG = vercelTeamSlug;
+  if (vercelProjectName !== undefined) process.env.VERCEL_PROJECT_NAME = vercelProjectName;
   res.json(getSettings());
 });
 
@@ -494,8 +507,18 @@ router.post(
     res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders();
 
-    const send = (data: object) => {
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    // Helpers: raw-token SSE format as per spec
+    const sendToken = (token: string) => {
+      // Encode newlines within a token so the SSE frame stays on one line
+      res.write(`data: ${token.replace(/\r?\n/g, "\\n")}\n\n`);
+    };
+    const sendDone = (html: string) => {
+      res.write(`event: done\ndata: ${JSON.stringify({ html })}\n\n`);
+      res.write("data: [DONE]\n\n");
+    };
+    const sendError = (message: string) => {
+      res.write(`event: error\ndata: ${JSON.stringify({ error: message })}\n\n`);
+      res.write("data: [DONE]\n\n");
     };
 
     try {
@@ -505,7 +528,7 @@ router.post(
         .where(eq(builderProjectsTable.id, id));
 
       if (!project) {
-        send({ error: "Project not found" });
+        sendError("Project not found");
         res.end();
         return;
       }
@@ -534,19 +557,19 @@ ${currentHtml ? `Current HTML to modify:\n${currentHtml.slice(0, 6000)}` : "This
 ${conversationHistory.length > 0 ? `\nPrevious context:\n${conversationHistory.slice(-6).map((m) => `${m.role}: ${m.content}`).join("\n")}` : ""}`;
 
       if (!settings.openrouterKeyConfigured) {
-        // Stream mock response character-by-character
+        // Stream mock response token-by-token
         const mockHtml = generateMockHtml(prompt);
         const chunks = mockHtml.match(/.{1,80}/g) ?? [];
         for (const chunk of chunks) {
-          send({ chunk });
+          sendToken(chunk);
           await new Promise((r) => setTimeout(r, 8));
         }
         await db
           .insert(builderMessagesTable)
           .values({ projectId: id, role: "assistant", content: "Mock response — add OpenRouter API key in Settings.", model: "mock" });
         await db.update(builderProjectsTable).set({ htmlContent: mockHtml, updatedAt: new Date() }).where(eq(builderProjectsTable.id, id));
-        send({ done: true, html: mockHtml });
-        res.write("data: [DONE]\n\n");
+        console.log(`[workflow-run] mock stream complete for project ${id}, ${chunks.length} chunks`);
+        sendDone(mockHtml);
         res.end();
         return;
       }
@@ -607,7 +630,7 @@ ${conversationHistory.length > 0 ? `\nPrevious context:\n${conversationHistory.s
                 const chunk = parsed.choices?.[0]?.delta?.content ?? "";
                 if (chunk) {
                   fullContent += chunk;
-                  send({ chunk });
+                  sendToken(chunk);
                 }
               } catch {
                 // skip malformed SSE lines
@@ -626,7 +649,7 @@ ${conversationHistory.length > 0 ? `\nPrevious context:\n${conversationHistory.s
       if (!success) {
         fullContent = generateMockHtml(prompt);
         for (const chunk of (fullContent.match(/.{1,80}/g) ?? [])) {
-          send({ chunk });
+          sendToken(chunk);
           await new Promise((r) => setTimeout(r, 6));
         }
       }
@@ -637,7 +660,7 @@ ${conversationHistory.length > 0 ? `\nPrevious context:\n${conversationHistory.s
       if (fence) html = fence[1].trim();
       if (!html.includes("<!DOCTYPE") && !html.includes("<html")) html = wrapInHtml(html, prompt);
 
-      // Save to DB
+      // Save to DB and log completion
       await db.insert(builderMessagesTable).values({
         projectId: id,
         role: "assistant",
@@ -645,12 +668,11 @@ ${conversationHistory.length > 0 ? `\nPrevious context:\n${conversationHistory.s
         model: usedModel,
       });
       await db.update(builderProjectsTable).set({ htmlContent: html, updatedAt: new Date() }).where(eq(builderProjectsTable.id, id));
+      console.log(`[stream] generation complete: project=${id} model=${usedModel} chars=${html.length}`);
 
-      send({ done: true, html });
-      res.write("data: [DONE]\n\n");
+      sendDone(html);
     } catch (err) {
-      send({ error: String(err) });
-      res.write("data: [DONE]\n\n");
+      sendError(String(err));
     }
 
     res.end();
