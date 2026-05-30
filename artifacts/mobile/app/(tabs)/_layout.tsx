@@ -5,10 +5,28 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
+import { useRouter } from "expo-router";
 
 import { useColors } from "@/hooks/useColors";
 import { NotificationBell } from "@/components/NotificationBell";
+
+function HeaderRight() {
+  const colors = useColors();
+  const router = useRouter();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", marginRight: 4 }}>
+      <NotificationBell />
+      <TouchableOpacity
+        onPress={() => router.push("/settings")}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={{ marginLeft: 4, padding: 8 }}
+      >
+        <Feather name="settings" size={20} color={colors.foreground} />
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 function NativeTabLayout() {
   return (
@@ -52,7 +70,7 @@ function ClassicTabLayout() {
         headerTitleStyle: {
           color: colors.foreground,
         },
-        headerRight: () => <NotificationBell />,
+        headerRight: () => <HeaderRight />,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS ? "transparent" : colors.background,
@@ -82,7 +100,7 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "Dashboard",
-          headerRight: () => null,
+          headerRight: () => <HeaderRight />,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="cpu" tintColor={color} size={24} />

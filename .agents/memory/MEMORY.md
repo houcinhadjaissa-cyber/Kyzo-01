@@ -1,0 +1,2 @@
+- [Port config](port-config.md) — artifact's Expo workflow owns port 18115; never create a duplicate "Mobile App" workflow or port 8081 conflict will freeze Expo with interactive prompt
+- [API security layer](api-security.md) — helmet + rate limiting added to app.ts; AI routes have 30 req/min limit, global 200 req/min

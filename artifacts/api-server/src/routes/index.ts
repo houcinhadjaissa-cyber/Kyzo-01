@@ -14,9 +14,11 @@ import usageRouter from "./usage.js";
 import notificationsRouter from "./notifications.js";
 import agentRouter from "./agent.js";
 import subscriptionRouter from "./subscription.js";
+import eventsRouter from "./events.js";
 
 const router: IRouter = Router();
 
+router.use(eventsRouter);
 router.use(healthRouter);
 router.use(projectsRouter);
 router.use(workflowsRouter);
