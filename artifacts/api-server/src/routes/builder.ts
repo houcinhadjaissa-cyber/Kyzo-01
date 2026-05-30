@@ -708,9 +708,18 @@ router.post(
       }
 
       const htmlContent = project.htmlContent || "<html><body><h1>Empty project</h1></body></html>";
-      const projectName = `aios-${project.name.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 40)}-${id.slice(0, 8)}`;
 
-      const deployRes = await fetch("https://api.vercel.com/v13/deployments", {
+      // Honour saved deploy config — vercelProjectName / vercelTeamSlug from settings
+      const { vercelTeamSlug, vercelProjectName: savedProjectName } = getSettings();
+      const autoName = `aios-${project.name.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 40)}-${id.slice(0, 8)}`;
+      const projectName = savedProjectName || autoName;
+
+      // Append teamSlug as query param when deploying to a team
+      const deployUrl = vercelTeamSlug
+        ? `https://api.vercel.com/v13/deployments?teamSlug=${encodeURIComponent(vercelTeamSlug)}`
+        : "https://api.vercel.com/v13/deployments";
+
+      const deployRes = await fetch(deployUrl, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${vercelToken}`,
@@ -767,6 +776,103 @@ router.post(
       res.json({ ok: false, message: "Deploy timeout — check Vercel dashboard" });
     } catch (err) {
       res.status(500).json({ ok: false, message: String(err) });
+    }
+  },
+);
+
+// ─── Module Insertion (silent — no chat message) ──────────────────────────────
+
+router.post(
+  "/builder/projects/:id/insert-module",
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { moduleType, prompt } = req.body as { moduleType: string; prompt: string };
+
+      if (!prompt) {
+        res.status(400).json({ ok: false, error: "prompt required" });
+        return;
+      }
+
+      const [project] = await db
+        .select()
+        .from(builderProjectsTable)
+        .where(eq(builderProjectsTable.id, id));
+
+      if (!project) {
+        res.status(404).json({ ok: false, error: "Project not found" });
+        return;
+      }
+
+      const settings = getSettings();
+      const model = pickModel("ui", settings.premiumModelsEnabled);
+
+      const currentHtml = project.htmlContent || "";
+
+      const systemPrompt = `You are an expert web developer. You will be given an existing HTML page and instructions to add a new e-commerce section to it. Return ONLY the complete updated HTML document with the new section added. Do not add explanations, markdown fences, or any text outside the HTML. Preserve all existing content.`;
+
+      const userPrompt = `Module type: ${moduleType}
+
+Instructions: ${prompt}
+
+${currentHtml ? `Current HTML (preserve all existing content, append the new section):\n${currentHtml.slice(0, 12000)}` : "Start a new page with just this module section."}`;
+
+      let updatedHtml: string;
+
+      if (!settings.openrouterKeyConfigured) {
+        // No API key — generate a placeholder section
+        updatedHtml = currentHtml
+          ? currentHtml.replace("</body>", `<!-- ${moduleType} module placeholder -->\n<section id="${moduleType}-module" style="padding:40px;text-align:center;background:#f5f5f7;"><h2>${moduleType} Module</h2><p>Configure your OpenRouter API key to generate real content.</p></section>\n</body>`)
+          : `<!DOCTYPE html><html><body><section style="padding:40px;text-align:center;"><h2>${moduleType} Module</h2></section></body></html>`;
+      } else {
+        const { content } = await callOpenRouter(model, systemPrompt, userPrompt);
+        // Strip possible markdown fence wrapping
+        const cleaned = content.replace(/^```html\n?/i, "").replace(/^```\n?/, "").replace(/\n?```$/, "").trim();
+        updatedHtml = cleaned.startsWith("<!") || cleaned.startsWith("<html") ? cleaned : (currentHtml || cleaned);
+      }
+
+      // Persist updated HTML
+      await db
+        .update(builderProjectsTable)
+        .set({ htmlContent: updatedHtml, updatedAt: new Date() })
+        .where(eq(builderProjectsTable.id, id));
+
+      console.log(`[insert-module] project=${id} module=${moduleType} html=${updatedHtml.length}chars`);
+      res.json({ ok: true, html: updatedHtml });
+    } catch (err) {
+      console.error("[insert-module] error:", err);
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  },
+);
+
+// ─── Test Connection ──────────────────────────────────────────────────────────
+
+router.get(
+  "/builder/test-connection",
+  async (_req: Request, res: Response) => {
+    const key = process.env.OPENROUTER_API_KEY;
+    if (!key) {
+      res.json({ ok: false, error: "No OpenRouter API key configured." });
+      return;
+    }
+    try {
+      const probe = await fetch("https://openrouter.ai/api/v1/models", {
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "HTTP-Referer": process.env.FRONTEND_URL ?? "https://aios.app",
+        },
+      });
+      if (!probe.ok) {
+        const text = await probe.text();
+        res.json({ ok: false, error: `OpenRouter responded ${probe.status}: ${text.slice(0, 200)}` });
+        return;
+      }
+      const data = (await probe.json()) as { data?: unknown[] };
+      const modelCount = Array.isArray(data.data) ? data.data.length : 0;
+      res.json({ ok: true, message: `Connected — ${modelCount} models available` });
+    } catch (err) {
+      res.json({ ok: false, error: `Network error: ${String(err)}` });
     }
   },
 );

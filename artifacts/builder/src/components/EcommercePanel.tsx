@@ -76,26 +76,41 @@ const MODULES: Module[] = [
 
 interface EcommercePanelProps {
   projectId: string;
-  currentHtml: string;
   initialEnabled?: Record<string, boolean>;
-  onInsert: (prompt: string) => void;
+  onHtmlUpdate: (html: string) => void;
   onToggle?: (moduleId: string, enabled: boolean) => void;
   onClose: () => void;
 }
 
-export default function EcommercePanel({ projectId: _projectId, currentHtml: _currentHtml, initialEnabled = {}, onInsert, onToggle, onClose }: EcommercePanelProps) {
+export default function EcommercePanel({ projectId, initialEnabled = {}, onHtmlUpdate, onToggle, onClose }: EcommercePanelProps) {
   const [enabled, setEnabled] = useState<Record<string, boolean>>(initialEnabled);
   const [inserting, setInserting] = useState<string | null>(null);
-  const [inserted, setInserted] = useState<Record<string, boolean>>({})
+  const [inserted, setInserted] = useState<Record<string, boolean>>({});
+  const [insertError, setInsertError] = useState<string | null>(null);
 
   const handleInsert = async (mod: Module) => {
     setInserting(mod.id);
-    onInsert(mod.prompt);
-    await new Promise((r) => setTimeout(r, 500));
-    setInserting(null);
-    setInserted((prev) => ({ ...prev, [mod.id]: true }));
-    setEnabled((prev) => ({ ...prev, [mod.id]: true }));
-    setTimeout(() => setInserted((prev) => ({ ...prev, [mod.id]: false })), 3000);
+    setInsertError(null);
+    try {
+      const res = await fetch(`/api/builder/projects/${projectId}/insert-module`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleType: mod.id, prompt: mod.prompt }),
+      });
+      const data = (await res.json()) as { ok: boolean; html?: string; error?: string };
+      if (data.ok && data.html) {
+        onHtmlUpdate(data.html);
+        setEnabled((prev) => ({ ...prev, [mod.id]: true }));
+        setInserted((prev) => ({ ...prev, [mod.id]: true }));
+        setTimeout(() => setInserted((prev) => ({ ...prev, [mod.id]: false })), 3000);
+      } else {
+        setInsertError(data.error ?? "Module insertion failed.");
+      }
+    } catch (err) {
+      setInsertError(`Network error: ${String(err)}`);
+    } finally {
+      setInserting(null);
+    }
   };
 
   return (
@@ -115,8 +130,13 @@ export default function EcommercePanel({ projectId: _projectId, currentHtml: _cu
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-3">
           <p className="text-sm text-muted-foreground">
-            Insert professional e-commerce sections into your project with one click. AI will generate the complete HTML+JS for each module.
+            Insert professional e-commerce sections into your project with one click. AI generates and injects the HTML silently — no chat message needed.
           </p>
+          {insertError && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive">
+              {insertError}
+            </div>
+          )}
           <Separator />
           {MODULES.map((mod) => (
             <div key={mod.id} className="rounded-xl border bg-card p-4 space-y-3">

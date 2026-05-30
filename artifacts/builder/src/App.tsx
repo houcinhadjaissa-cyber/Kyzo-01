@@ -20,8 +20,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
-      <Route path="/projects/:id" component={Builder} />
       <Route path="/settings" component={Settings} />
+      <Route path="/projects/:id" component={Builder} />
+      <Route path="/:id" component={Builder} />
       <Route component={NotFound} />
     </Switch>
   );

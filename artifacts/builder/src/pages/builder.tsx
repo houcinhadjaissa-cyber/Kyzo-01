@@ -938,9 +938,11 @@ export default function Builder() {
       {showEcommerce && (
         <EcommercePanel
           projectId={id ?? ""}
-          currentHtml={localHtml}
           initialEnabled={ecomModules}
-          onInsert={(p) => handleSend(p)}
+          onHtmlUpdate={(html) => {
+            setLocalHtml(html);
+            updateProject.mutate({ id: id ?? "", data: { htmlContent: html } });
+          }}
           onToggle={handleEcomToggle}
           onClose={() => setShowEcommerce(false)}
         />

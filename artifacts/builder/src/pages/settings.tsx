@@ -75,14 +75,14 @@ export default function Settings() {
     setTestStatus("testing");
     setTestMsg("");
     try {
-      const res = await fetch("/api/builder/settings");
-      const data = (await res.json()) as { openrouterKeyConfigured?: boolean };
-      if (data.openrouterKeyConfigured) {
+      const res = await fetch("/api/builder/test-connection");
+      const data = (await res.json()) as { ok: boolean; message?: string; error?: string };
+      if (data.ok) {
         setTestStatus("ok");
-        setTestMsg("OpenRouter connection successful — AI generation is active.");
+        setTestMsg(data.message ?? "OpenRouter connection successful — AI generation is active.");
       } else {
         setTestStatus("error");
-        setTestMsg("No OpenRouter API key found. Add it above.");
+        setTestMsg(data.error ?? "OpenRouter API key invalid or unreachable.");
       }
     } catch {
       setTestStatus("error");
